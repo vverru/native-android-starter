@@ -103,6 +103,11 @@ class MainActivity : AppCompatActivity() {
                 .show(target)
                 .commit()
             activeFragment = target
+            if (target == filesFragment) {
+                binding.fabUpload.show()
+            } else {
+                binding.fabUpload.hide()
+            }
         }
     }
 

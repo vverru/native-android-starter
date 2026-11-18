@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -33,14 +31,12 @@ class SettingsFragment : Fragment() {
         val phone = client.phoneNumber
         binding.tvProfileName.text = if (phone.isNotBlank()) "Telegram: $phone" else "Telegram: Connected"
 
+        // Display Real Storage Breakdown
+        refreshStorageUsage()
+
         // Navigate to Trash
         binding.btnNavTrash.setOnClickListener {
             startActivity(Intent(requireContext(), TrashActivity::class.java))
-        }
-
-        // Configure Telegram API Keys
-        binding.btnNavApiKeys.setOnClickListener {
-            showApiKeysDialog()
         }
 
         // Toggle Language
@@ -63,12 +59,20 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    private fun showApiKeysDialog() {
-        AlertDialog.Builder(requireContext(), com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
-            .setTitle(R.string.setting_api_config)
-            .setMessage("🔒 SecurityVault Active:\n\n• API_ID: Protected (Bitwise masked)\n• API_HASH: Protected (XOR entropy masked)\n\nCredentials are encrypted into binary bytecode. No hacker or decompiler can extract them in plaintext.")
-            .setPositiveButton("OK", null)
-            .show()
+    override fun onResume() {
+        super.onResume()
+        refreshStorageUsage()
+    }
+
+    private fun refreshStorageUsage() {
+        try {
+            val stats = VaultXApplication.instance.databaseHelper.getStorageBreakdown()
+            binding.tvTotalUsed.text = stats.formattedTotal
+            binding.tvPhotoStorage.text = "${stats.formattedPhotos} (${stats.photosCount} files)"
+            binding.tvVideoStorage.text = "${stats.formattedVideos} (${stats.videosCount} files)"
+            binding.tvDocStorage.text = "${stats.formattedPdfs} (${stats.pdfsCount} files)"
+            binding.tvAudioStorage.text = "${stats.formattedAudio} (${stats.audioCount} files)"
+        } catch (_: Exception) {}
     }
 
     private fun showLanguageDialog() {

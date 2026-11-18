@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/vaultx_bg">
+
+    <!-- Top Action Bar -->
+    <LinearLayout
+        android:id="@+id/topBarPdf"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/vaultx_surface"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp">
+
+        <ImageButton
+            android:id="@+id/btnPdfBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close"
+            app:tint="@color/vaultx_text_primary"
+            android:contentDescription="@null" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvPdfFileName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/vaultx_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="middle" />
+
+            <TextView
+                android:id="@+id/tvPdfPageIndicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/vaultx_text_secondary"
+                android:textSize="12sp"
+                android:text="Loading..." />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnPdfShare"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_share"
+            app:tint="@color/vaultx_text_primary"
+            android:contentDescription="Share" />
+    </LinearLayout>
+
+    <!-- Center PDF Page View -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomBarPdf"
+        android:layout_below="@id/topBarPdf"
+        android:background="#202020">
+
+        <ImageView
+            android:id="@+id/ivPdfPage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:contentDescription="PDF Page" />
+
+        <ProgressBar
+            android:id="@+id/pdfLoadingProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvPdfEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Unable to render PDF"
+            android:textColor="@color/vaultx_text_secondary"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Bottom Navigation Bar for PDF Pages -->
+    <LinearLayout
+        android:id="@+id/bottomBarPdf"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/vaultx_surface"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPrevPage"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="◀ Previous"
+            android:textColor="@color/vaultx_primary" />
+
+        <TextView
+            android:id="@+id/tvCurrentPageInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="1 / 1"
+            android:textColor="@color/vaultx_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNextPage"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Next ▶"
+            android:textColor="@color/vaultx_primary" />
+    </LinearLayout>
+
+</RelativeLayout>

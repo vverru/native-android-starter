@@ -192,6 +192,82 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         return list
     }
 
+    fun renameFile(fileId: Long, newName: String, newLocalUri: String? = null): Int {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COL_NAME, newName)
+            if (newLocalUri != null) {
+                put(COL_LOCAL_URI, newLocalUri)
+            }
+        }
+        return db.update(TABLE_FILES, values, "$COL_ID = ?", arrayOf(fileId.toString()))
+    }
+
+    fun getStorageBreakdown(): StorageBreakdown {
+        val db = readableDatabase
+        var totalBytes = 0L
+        var photoBytes = 0L
+        var photoCount = 0
+        var videoBytes = 0L
+        var videoCount = 0
+        var pdfBytes = 0L
+        var pdfCount = 0
+        var docBytes = 0L
+        var docCount = 0
+        var audioBytes = 0L
+        var audioCount = 0
+
+        val cursor = db.rawQuery(
+            "SELECT $COL_CATEGORY, SUM($COL_SIZE_BYTES), COUNT(*) FROM $TABLE_FILES WHERE $COL_IS_TRASH = 0 GROUP BY $COL_CATEGORY",
+            null
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                val catStr = it.getString(0)
+                val sumBytes = it.getLong(1)
+                val count = it.getInt(2)
+                totalBytes += sumBytes
+
+                when (catStr) {
+                    FileCategory.PHOTOS.name -> {
+                        photoBytes = sumBytes
+                        photoCount = count
+                    }
+                    FileCategory.VIDEOS.name -> {
+                        videoBytes = sumBytes
+                        videoCount = count
+                    }
+                    FileCategory.PDFS.name -> {
+                        pdfBytes = sumBytes
+                        pdfCount = count
+                    }
+                    FileCategory.DOCS.name -> {
+                        docBytes = sumBytes
+                        docCount = count
+                    }
+                    FileCategory.AUDIO.name -> {
+                        audioBytes = sumBytes
+                        audioCount = count
+                    }
+                }
+            }
+        }
+
+        return StorageBreakdown(
+            totalBytes = totalBytes,
+            photoBytes = photoBytes,
+            photoCount = photoCount,
+            videoBytes = videoBytes,
+            videoCount = videoCount,
+            pdfBytes = pdfBytes,
+            pdfCount = pdfCount,
+            docBytes = docBytes,
+            docCount = docCount,
+            audioBytes = audioBytes,
+            audioCount = audioCount
+        )
+    }
+
     fun purgeDummyData() {
         val db = writableDatabase
         // Remove old dummy sample records completely

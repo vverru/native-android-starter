@@ -41,8 +41,8 @@
 
                 <ImageView
                     android:id="@+id/ivAvatar"
-                    android:layout_width="54dp"
-                    android:layout_height="54dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:src="@drawable/ic_folder"
                     app:tint="@color/vaultx_primary"
                     android:contentDescription="@null" />
@@ -74,11 +74,11 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Savings Analytics Card -->
+        <!-- Real Cloud Storage Breakdown Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="14dp"
             app:cardCornerRadius="16dp"
             app:cardBackgroundColor="@color/vaultx_surface"
             app:strokeWidth="1dp"
@@ -90,25 +90,185 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/storage_savings_title"
-                    android:textColor="@color/vaultx_text_primary"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Cloud Storage Usage"
+                        android:textColor="@color/vaultx_text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTotalUsed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 B"
+                        android:textColor="@color/vaultx_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/progressStorageUsage"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="12dp"
+                    android:progress="100"
+                    app:indicatorColor="@color/vaultx_primary"
+                    app:trackColor="@color/vaultx_surface_variant" />
+
+                <!-- Category Breakdown Rows -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/storage_savings_desc"
-                    android:textColor="@color/vaultx_success"
-                    android:textSize="13sp" />
+                    android:orientation="vertical"
+                    android:layout_marginTop="14dp">
+
+                    <!-- Photos -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="4dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_photo"
+                            app:tint="@color/vaultx_primary"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="10dp"
+                            android:text="Photos &amp; Images"
+                            android:textColor="@color/vaultx_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvPhotoStorage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 B (0 files)"
+                            android:textColor="@color/vaultx_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Videos -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="4dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_video"
+                            app:tint="@color/vaultx_accent_star"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="10dp"
+                            android:text="Videos &amp; Movies"
+                            android:textColor="@color/vaultx_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvVideoStorage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 B (0 files)"
+                            android:textColor="@color/vaultx_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- PDFs & Docs -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="4dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_pdf"
+                            app:tint="@color/vaultx_danger"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="10dp"
+                            android:text="PDFs &amp; Documents"
+                            android:textColor="@color/vaultx_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvDocStorage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 B (0 files)"
+                            android:textColor="@color/vaultx_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Audio -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="4dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_audio"
+                            app:tint="@color/vaultx_success"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="10dp"
+                            android:text="Audio &amp; Music"
+                            android:textColor="@color/vaultx_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvAudioStorage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 B (0 files)"
+                            android:textColor="@color/vaultx_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Menu Action Items -->
+        <!-- Menu Action Items (Without API Keys row) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -131,23 +291,6 @@
                     android:gravity="center_vertical"
                     android:paddingHorizontal="16dp"
                     android:text="@string/setting_trash"
-                    android:textColor="@color/vaultx_text_primary"
-                    android:textSize="15sp"
-                    android:background="?attr/selectableItemBackground" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/vaultx_card_stroke" />
-
-                <!-- API Config -->
-                <TextView
-                    android:id="@+id/btnNavApiKeys"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="16dp"
-                    android:text="@string/setting_api_config"
                     android:textColor="@color/vaultx_text_primary"
                     android:textSize="15sp"
                     android:background="?attr/selectableItemBackground" />

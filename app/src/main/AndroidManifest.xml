@@ -53,6 +53,11 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:theme="@style/Theme.VaultX.Fullscreen" />
 
+        <!-- Native In-App PDF Viewer -->
+        <activity
+            android:name=".ui.viewer.PdfViewerActivity"
+            android:exported="false" />
+
         <!-- In-app Trash Activity -->
         <activity
             android:name=".ui.trash.TrashActivity"

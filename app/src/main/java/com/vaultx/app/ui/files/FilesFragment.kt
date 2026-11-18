@@ -181,9 +181,26 @@ class FilesFragment : Fragment() {
                 }
                 startActivity(intent)
             }
+            FileCategory.PDFS -> {
+                val intent = Intent(requireContext(), com.vaultx.app.ui.viewer.PdfViewerActivity::class.java).apply {
+                    putExtra("file_name", file.name)
+                    putExtra("file_id", file.id)
+                    putExtra("file_uri", file.localUri)
+                }
+                startActivity(intent)
+            }
             else -> {
-                // Open documents with Intent.ACTION_VIEW
-                Toast.makeText(requireContext(), "${getString(R.string.action_open_with)} ${file.name}", Toast.LENGTH_SHORT).show()
+                if (file.name.lowercase().endsWith(".pdf")) {
+                    val intent = Intent(requireContext(), com.vaultx.app.ui.viewer.PdfViewerActivity::class.java).apply {
+                        putExtra("file_name", file.name)
+                        putExtra("file_id", file.id)
+                        putExtra("file_uri", file.localUri)
+                    }
+                    startActivity(intent)
+                } else {
+                    // Open documents with Intent.ACTION_VIEW
+                    Toast.makeText(requireContext(), "${getString(R.string.action_open_with)} ${file.name}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

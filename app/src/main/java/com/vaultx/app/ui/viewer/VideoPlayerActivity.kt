@@ -1,19 +1,24 @@
 package com.vaultx.app.ui.viewer
 
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import com.vaultx.app.databinding.ActivityVideoPlayerBinding
 
+@UnstableApi
 class VideoPlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityVideoPlayerBinding
     private var exoPlayer: ExoPlayer? = null
     private var currentSpeed = 1.0f
+    private var isLandscape = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,11 +30,29 @@ class VideoPlayerActivity : AppCompatActivity() {
 
         binding.btnVideoBack.setOnClickListener { finish() }
 
+        // Orientation / Vertical & Horizontal Toggle
+        binding.btnToggleOrientation.setOnClickListener {
+            toggleOrientation()
+        }
+
         binding.btnPlaybackSpeed.setOnClickListener {
             showSpeedDialog()
         }
 
         initializePlayer()
+    }
+
+    private fun toggleOrientation() {
+        isLandscape = !isLandscape
+        if (isLandscape) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            Toast.makeText(this, "Horizontal (16:9 Landscape)", Toast.LENGTH_SHORT).show()
+        } else {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            Toast.makeText(this, "Vertical (Portrait)", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun initializePlayer() {

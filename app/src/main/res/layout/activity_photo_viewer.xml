@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black">
@@ -10,10 +11,10 @@
         android:id="@+id/topBarPhoto"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#88000000"
+        android:background="#99000000"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="16dp">
+        android:paddingHorizontal="12dp">
 
         <ImageButton
             android:id="@+id/btnPhotoBack"
@@ -21,13 +22,15 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close"
+            app:tint="@color/white"
             android:contentDescription="@null" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:orientation="vertical">
 
             <TextView
@@ -48,11 +51,35 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Rename Button -->
+        <ImageButton
+            android:id="@+id/btnPhotoRename"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/white"
+            android:contentDescription="Rename" />
+
+        <!-- Crop / Edit Button -->
+        <ImageButton
+            android:id="@+id/btnPhotoCrop"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_crop"
+            app:tint="@color/white"
+            android:contentDescription="Crop &amp; Rotate" />
+
+        <!-- Favorite Button -->
         <ImageView
             android:id="@+id/ivViewerFav"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginStart="8dp"
             android:src="@drawable/ic_star_outline"
+            app:tint="@color/vaultx_accent_star"
             android:contentDescription="@string/action_favorite" />
     </LinearLayout>
 
@@ -73,7 +100,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_alignParentBottom="true"
-        android:background="#88000000"
+        android:background="#99000000"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
