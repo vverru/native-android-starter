@@ -69,9 +69,9 @@ class SettingsFragment : Fragment() {
         try {
             val stats = VaultXApplication.instance.databaseHelper.getStorageBreakdown()
             binding.tvTotalUsed.text = stats.formattedTotal
-            binding.tvPhotoStorage.text = "${stats.formattedPhotos} (${stats.photosCount} files)"
-            binding.tvVideoStorage.text = "${stats.formattedVideos} (${stats.videosCount} files)"
-            binding.tvDocStorage.text = "${stats.formattedPdfs} (${stats.pdfsCount} files)"
+            binding.tvPhotoStorage.text = "${stats.formattedPhotos} (${stats.photoCount} files)"
+            binding.tvVideoStorage.text = "${stats.formattedVideos} (${stats.videoCount} files)"
+            binding.tvDocStorage.text = "${stats.formattedPdfs} (${stats.pdfCount + stats.docCount} files)"
             binding.tvAudioStorage.text = "${stats.formattedAudio} (${stats.audioCount} files)"
         } catch (_: Exception) {}
     }
