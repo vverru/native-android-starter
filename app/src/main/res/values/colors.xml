@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#1E88E5</color>
-    <color name="primary_dark">#1565C0</color>
-    <color name="accent">#00E676</color>
-    <color name="background">#F5F7FA</color>
-    <color name="card_bg">#FFFFFF</color>
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
-    <color name="black">#FF000000</color>
+    <!-- Telegram Dark-First Brand Colors -->
+    <color name="vaultx_primary">#2AABEE</color>
+    <color name="vaultx_primary_dark">#229ED9</color>
+    <color name="vaultx_primary_container">#1A4560</color>
+    <color name="vaultx_on_primary">#FFFFFF</color>
+
+    <color name="vaultx_bg">#0E1621</color>
+    <color name="vaultx_surface">#17212B</color>
+    <color name="vaultx_surface_variant">#242F3D</color>
+    <color name="vaultx_card_stroke">#2B394A</color>
+
+    <color name="vaultx_text_primary">#FFFFFF</color>
+    <color name="vaultx_text_secondary">#708499</color>
+    <color name="vaultx_text_muted">#4E5D6C</color>
+
+    <color name="vaultx_accent_star">#FFC107</color>
+    <color name="vaultx_success">#4CAF50</color>
+    <color name="vaultx_danger">#F44336</color>
+    <color name="vaultx_pro_badge">#9C27B0</color>
+
     <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="transparent">#00000000</color>
 </resources>

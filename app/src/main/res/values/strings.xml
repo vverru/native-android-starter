@@ -1,10 +1,91 @@
 <resources>
-    <string name="app_name">Native Starter App</string>
-    <string name="welcome_title">Welcome to your Native Android App!</string>
-    <string name="welcome_subtitle">Built with Kotlin &amp; Material 3</string>
-    <string name="click_count_text">Button clicks: %1$d</string>
-    <string name="btn_click_me">Tap Me</string>
-    <string name="btn_reset">Reset</string>
-    <string name="about_heading">About this App</string>
-    <string name="about_body">This native Android app was compiled automatically using GitHub Actions CI/CD. Zero local build dependencies required!</string>
+    <string name="app_name">VaultX</string>
+    <string name="tagline">Unlimited Cloud Storage powered by your Telegram</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_files">Files</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_backup">Backup</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Search & Filters -->
+    <string name="search_hint">Search files by name…</string>
+    <string name="chip_all">All</string>
+    <string name="chip_photos">Photos</string>
+    <string name="chip_videos">Videos</string>
+    <string name="chip_pdfs">PDFs</string>
+    <string name="chip_docs">Docs</string>
+    <string name="chip_audio">Audio</string>
+
+    <string name="recent_files">Recent Files</string>
+    <string name="all_files">All Files</string>
+    <string name="empty_files_title">No files uploaded yet</string>
+    <string name="empty_files_desc">Tap the + button below to upload photos, videos, or documents to your private Telegram vault.</string>
+    <string name="empty_fav_title">No favorites yet</string>
+    <string name="empty_fav_desc">Tap the star icon on any photo, video, PDF or document to add it here.</string>
+
+    <!-- Actions -->
+    <string name="btn_upload">Upload File</string>
+    <string name="action_download">Download</string>
+    <string name="action_share">Share</string>
+    <string name="action_favorite">Favorite</string>
+    <string name="action_unfavorite">Unfavorite</string>
+    <string name="action_delete">Move to Trash</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_delete_forever">Delete Forever</string>
+    <string name="action_sort">Sort by</string>
+    <string name="action_open_with">Open with…</string>
+
+    <!-- Upload Card -->
+    <string name="uploading_title">Uploading to Telegram…</string>
+    <string name="upload_paused">Paused</string>
+    <string name="upload_resume">Resume</string>
+    <string name="upload_pause">Pause</string>
+    <string name="upload_cancel">Cancel</string>
+
+    <!-- Backup Tab -->
+    <string name="backup_title">Media Auto-Backup</string>
+    <string name="backup_subtitle">Automatically sync your phone memories into your private Telegram channel.</string>
+    <string name="backup_camera_toggle">Auto-backup Camera (DCIM)</string>
+    <string name="backup_camera_desc">Backs up photos and videos when connected to Wi-Fi/Data</string>
+    <string name="backup_whatsapp_toggle">Auto-backup WhatsApp Media</string>
+    <string name="backup_whatsapp_desc">Sync incoming photos, videos and documents from WhatsApp</string>
+    <string name="backup_btn_now">Back Up Now</string>
+    <string name="backup_status_idle">Last backup: Just now • 1,240 media items synced</string>
+    <string name="backup_pro_badge">PRO</string>
+
+    <!-- Settings Tab -->
+    <string name="settings_title">Settings</string>
+    <string name="telegram_account">Telegram Account</string>
+    <string name="storage_unlimited">Storage: Unlimited (Free ∞)</string>
+    <string name="storage_savings_title">Storage Savings</string>
+    <string name="storage_savings_desc">You saved 214 GB • Google Drive would charge ₹2,100/yr</string>
+    <string name="setting_appearance">Appearance</string>
+    <string name="setting_language">Language / भाषा</string>
+    <string name="setting_api_config">Telegram API Keys (API_ID &amp; Hash)</string>
+    <string name="setting_trash">Trash Bin</string>
+    <string name="setting_security">Privacy &amp; Security</string>
+    <string name="setting_security_desc">Files are stored ONLY in your private Telegram channel. Zero data on 3rd party servers.</string>
+    <string name="btn_logout">Log out of Telegram</string>
+
+    <!-- Auth / Onboarding -->
+    <string name="login_title">Connect Telegram</string>
+    <string name="login_subtitle">Your Telegram account becomes your private, unlimited cloud vault.</string>
+    <string name="hint_phone">Phone number with country code (+91…)</string>
+    <string name="btn_continue">Send OTP Code</string>
+    <string name="hint_otp">Enter 5-digit Telegram Code</string>
+    <string name="btn_verify_otp">Verify &amp; Create Vault</string>
+    <string name="hint_2fa">Enter 2FA Password (if enabled)</string>
+    <string name="btn_verify_2fa">Submit Password</string>
+    <string name="auth_trust_badge">🔒 End-to-end encrypted • Session stays on device</string>
+
+    <!-- Sort Options -->
+    <string name="sort_name">Sort by Name</string>
+    <string name="sort_date">Sort by Date</string>
+    <string name="sort_size">Sort by Size</string>
+    <string name="sort_type">Sort by Type</string>
+
+    <string name="trash_title">Trash Bin</string>
+    <string name="trash_empty">Trash is empty</string>
+    <string name="trash_warning">Files in trash can be restored anytime or deleted permanently.</string>
 </resources>

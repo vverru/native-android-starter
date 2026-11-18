@@ -1,0 +1,91 @@
+<resources>
+    <string name="app_name">VaultX</string>
+    <string name="tagline">टेलीग्राम द्वारा संचालित असीमित क्लाउड स्टोरेज</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_files">फ़ाइलें</string>
+    <string name="nav_favorites">पसंदीदा</string>
+    <string name="nav_backup">बैकअप</string>
+    <string name="nav_settings">सेटिंग्स</string>
+
+    <!-- Search & Filters -->
+    <string name="search_hint">नाम से फ़ाइल खोजें…</string>
+    <string name="chip_all">सभी</string>
+    <string name="chip_photos">फ़ोटो</string>
+    <string name="chip_videos">वीडियो</string>
+    <string name="chip_pdfs">पीडीएफ</string>
+    <string name="chip_docs">दस्तावेज़</string>
+    <string name="chip_audio">ऑडियो</string>
+
+    <string name="recent_files">हालिया फ़ाइलें</string>
+    <string name="all_files">सभी फ़ाइलें</string>
+    <string name="empty_files_title">अभी तक कोई फ़ाइल अपलोड नहीं हुई</string>
+    <string name="empty_files_desc">अपने प्राइवेट टेलीग्राम वॉल्ट में फ़ोटो, वीडियो या दस्तावेज़ अपलोड करने के लिए नीचे दिए गए + बटन पर टैप करें।</string>
+    <string name="empty_fav_title">अभी कोई पसंदीदा फ़ाइल नहीं है</string>
+    <string name="empty_fav_desc">किसी भी फ़ोटो, वीडियो, पीडीएफ या दस्तावेज़ पर स्टार आइकन दबाकर उसे यहाँ जोड़ें।</string>
+
+    <!-- Actions -->
+    <string name="btn_upload">फ़ाइल अपलोड करें</string>
+    <string name="action_download">डाउनलोड</string>
+    <string name="action_share">शेयर</string>
+    <string name="action_favorite">पसंदीदा</string>
+    <string name="action_unfavorite">पसंदीदा से हटाएं</string>
+    <string name="action_delete">ट्रैश में भेजें</string>
+    <string name="action_restore">पुनर्स्थापित करें</string>
+    <string name="action_delete_forever">हमेशा के लिए हटाएं</string>
+    <string name="action_sort">क्रमबद्ध करें</string>
+    <string name="action_open_with">इसमें खोलें…</string>
+
+    <!-- Upload Card -->
+    <string name="uploading_title">टेलीग्राम पर अपलोड हो रहा है…</string>
+    <string name="upload_paused">रोक दिया गया</string>
+    <string name="upload_resume">पुनः शुरू करें</string>
+    <string name="upload_pause">रोकें</string>
+    <string name="upload_cancel">रद्द करें</string>
+
+    <!-- Backup Tab -->
+    <string name="backup_title">ऑटो-बैकअप</string>
+    <string name="backup_subtitle">अपने फोन की यादों को अपने निजी टेलीग्राम चैनल में स्वचालित रूप से सहेजें।</string>
+    <string name="backup_camera_toggle">कैमरा (DCIM) का ऑटो-बैकअप</string>
+    <string name="backup_camera_desc">वाई-फ़ाई या मोबाइल डेटा कनेक्ट होने पर फ़ोटो और वीडियो बैकअप करें</string>
+    <string name="backup_whatsapp_toggle">व्हाट्सएप मीडिया ऑटो-बैकअप</string>
+    <string name="backup_whatsapp_desc">व्हाट्सएप के आने वाले फ़ोटो, वीडियो और दस्तावेज़ सिंक करें</string>
+    <string name="backup_btn_now">अभी बैकअप लें</string>
+    <string name="backup_status_idle">अंतिम बैकअप: अभी • 1,240 मीडिया आइटम सुरक्षित</string>
+    <string name="backup_pro_badge">प्रो</string>
+
+    <!-- Settings Tab -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="telegram_account">टेलीग्राम खाता</string>
+    <string name="storage_unlimited">स्टोरेज: असीमित (मुफ़्त ∞)</string>
+    <string name="storage_savings_title">स्टोरेज बचत</string>
+    <string name="storage_savings_desc">आपने 214 GB बचाया • गूगल ड्राइव ₹2,100/वर्ष लेता</string>
+    <string name="setting_appearance">दिखावट (थीम)</string>
+    <string name="setting_language">भाषा (Language)</string>
+    <string name="setting_api_config">टेलीग्राम API कुंजियाँ (API_ID और Hash)</string>
+    <string name="setting_trash">ट्रैश बिन</string>
+    <string name="setting_security">गोपनीयता और सुरक्षा</string>
+    <string name="setting_security_desc">फ़ाइलें केवल आपके निजी टेलीग्राम चैनल में सुरक्षित हैं। किसी तीसरे सर्वर पर कोई डेटा नहीं।</string>
+    <string name="btn_logout">टेलीग्राम से लॉग आउट करें</string>
+
+    <!-- Auth / Onboarding -->
+    <string name="login_title">टेलीग्राम से कनेक्ट करें</string>
+    <string name="login_subtitle">आपका टेलीग्राम खाता आपका निजी, असीमित क्लाउड वॉल्ट बन जाता है।</string>
+    <string name="hint_phone">कंट्री कोड के साथ फोन नंबर (+91…)</string>
+    <string name="btn_continue">OTP कोड भेजें</string>
+    <string name="hint_otp">5 अंकों का टेलीग्राम कोड दर्ज करें</string>
+    <string name="btn_verify_otp">सत्यापित करें और वॉल्ट बनाएं</string>
+    <string name="hint_2fa">2FA पासवर्ड दर्ज करें (यदि सक्रिय है)</string>
+    <string name="btn_verify_2fa">पासवर्ड सबमिट करें</string>
+    <string name="auth_trust_badge">🔒 पूर्ण एन्क्रिप्टेड • सत्र केवल आपके डिवाइस पर सुरक्षित रहता है</string>
+
+    <!-- Sort Options -->
+    <string name="sort_name">नाम अनुसार</string>
+    <string name="sort_date">तारीख अनुसार</string>
+    <string name="sort_size">साइज अनुसार</string>
+    <string name="sort_type">प्रकार अनुसार</string>
+
+    <string name="trash_title">ट्रैश बिन</string>
+    <string name="trash_empty">ट्रैश खाली है</string>
+    <string name="trash_warning">ट्रैश में मौजूद फ़ाइलों को कभी भी पुनर्स्थापित किया जा सकता है या स्थायी रूप से हटाया जा सकता है।</string>
+</resources>

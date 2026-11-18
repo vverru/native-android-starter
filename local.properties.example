@@ -1,0 +1,4 @@
+# VaultX Telegram API Configuration
+# Get your API_ID and API_HASH from https://my.telegram.org (API development tools)
+TELEGRAM_API_ID=36163421
+TELEGRAM_API_HASH=6034451ec7692aa20b760443cda3c147

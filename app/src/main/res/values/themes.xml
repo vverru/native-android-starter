@@ -1,7 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.NativeStarterApp" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="android:statusBarColor">@color/primary_dark</item>
-        <item name="android:windowBackground">@color/background</item>
+    <style name="Theme.VaultX" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/vaultx_primary</item>
+        <item name="colorOnPrimary">@color/vaultx_on_primary</item>
+        <item name="colorPrimaryContainer">@color/vaultx_primary_container</item>
+        <item name="colorSecondary">@color/vaultx_primary</item>
+        <item name="android:statusBarColor">@color/vaultx_bg</item>
+        <item name="android:navigationBarColor">@color/vaultx_surface</item>
+        <item name="android:windowBackground">@color/vaultx_bg</item>
+        <item name="colorSurface">@color/vaultx_surface</item>
+        <item name="colorSurfaceVariant">@color/vaultx_surface_variant</item>
+    </style>
+
+    <style name="Theme.VaultX.Fullscreen" parent="Theme.VaultX">
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:windowBackground">@color/black</item>
     </style>
 </resources>

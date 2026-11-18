@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build & Package APK
+    name: Build & Package VaultX APK
     runs-on: ubuntu-latest
 
     steps:
@@ -29,9 +29,9 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload Debug APK Artifact
+      - name: Upload VaultX APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NativeStarterApp-Debug-APK
+          name: VaultX-Unlimited-Cloud-Storage-APK
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30

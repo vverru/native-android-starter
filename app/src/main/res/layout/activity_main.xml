@@ -1,165 +1,151 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout 
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
-    tools:context=".MainActivity">
+    android:background="@color/vaultx_bg">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/topAppBar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/primary"
-        app:title="@string/app_name"
-        app:titleTextColor="@color/white"
-        app:titleCentered="true"
-        android:elevation="4dp" />
-
-    <androidx.core.widget.NestedScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize"
-        android:fillViewport="true">
+        android:orientation="vertical">
 
-        <LinearLayout
+        <!-- Top Header Bar -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/mainToolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/vaultx_surface"
+            app:title="@string/app_name"
+            app:titleTextColor="@color/vaultx_text_primary"
+            app:subtitle="@string/tagline"
+            app:subtitleTextColor="@color/vaultx_text_secondary"
+            app:elevation="4dp" />
+
+        <!-- Main Fragment Container -->
+        <FrameLayout
+            android:id="@+id/fragmentContainer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Persistent Upload Progress Card (Visible when uploading) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardActiveUpload"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="6dp"
+            app:cardCornerRadius="14dp"
+            app:cardBackgroundColor="@color/vaultx_surface_variant"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/vaultx_primary"
+            android:visibility="gone">
 
-            <!-- Hero Banner Card -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/card_bg"
-                android:layout_marginBottom="16dp">
+                android:orientation="vertical"
+                android:padding="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp"
-                    android:gravity="center_horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
                     <TextView
-                        android:id="@+id/tvTitle"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/tvUploadFileName"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/welcome_title"
-                        android:textColor="@color/text_primary"
-                        android:textSize="20sp"
+                        android:layout_weight="1"
+                        android:text="movie_2026.mkv"
+                        android:textColor="@color/vaultx_text_primary"
+                        android:textSize="13sp"
                         android:textStyle="bold"
-                        android:gravity="center" />
+                        android:maxLines="1"
+                        android:ellipsize="middle" />
 
-                    <TextView
-                        android:id="@+id/tvSubtitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/welcome_subtitle"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:layout_marginTop="6dp" />
+                    <!-- Pause / Resume Button -->
+                    <ImageView
+                        android:id="@+id/btnUploadPauseResume"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_pause"
+                        android:padding="2dp"
+                        android:contentDescription="@string/upload_pause" />
 
+                    <!-- Cancel Button -->
+                    <ImageView
+                        android:id="@+id/btnUploadCancel"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_marginStart="8dp"
+                        android:src="@drawable/ic_close"
+                        android:padding="2dp"
+                        android:contentDescription="@string/upload_cancel" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Interactive Counter Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/card_bg"
-                android:layout_marginBottom="16dp">
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/progressUpload"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:progress="74"
+                    app:indicatorColor="@color/vaultx_primary"
+                    app:trackColor="@color/vaultx_surface" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp"
-                    android:gravity="center_horizontal">
+                    android:orientation="horizontal"
+                    android:layout_marginTop="4dp">
 
                     <TextView
-                        android:id="@+id/tvCounter"
+                        android:id="@+id/tvUploadBytes"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="1.4 GB / 1.9 GB"
+                        android:textColor="@color/vaultx_text_secondary"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvUploadSpeed"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Button clicks: 0"
-                        android:textColor="@color/primary"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="16dp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnTap"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="56dp"
-                            android:text="@string/btn_click_me"
-                            android:textSize="15sp"
-                            app:cornerRadius="12dp"
-                            android:layout_marginEnd="8dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnReset"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="56dp"
-                            android:text="@string/btn_reset"
-                            android:textSize="15sp"
-                            app:cornerRadius="12dp"
-                            android:layout_marginStart="8dp" />
-                    </LinearLayout>
-
+                        android:text="↑ 3.2 MB/s • [resume supported]"
+                        android:textColor="@color/vaultx_primary"
+                        android:textSize="11sp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <!-- About Section Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/card_bg">
+        <!-- Bottom Navigation Bar -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigationView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/vaultx_surface"
+            app:itemIconTint="@color/vaultx_primary"
+            app:itemTextColor="@color/vaultx_text_secondary"
+            app:menu="@menu/bottom_nav_menu"
+            app:labelVisibilityMode="labeled" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+    </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/about_heading"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/about_body"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    <!-- FAB for Uploading any file -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabUpload"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="76dp"
+        app:backgroundTint="@color/vaultx_primary"
+        app:tint="@color/vaultx_on_primary"
+        app:srcCompat="@drawable/ic_add"
+        android:contentDescription="@string/btn_upload" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,93 @@
+package com.vaultx.app.ui.adapters
+
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
+import com.vaultx.app.R
+import com.vaultx.app.data.model.FileCategory
+import com.vaultx.app.data.model.FileItem
+import com.vaultx.app.databinding.ItemFileGridBinding
+import com.vaultx.app.databinding.ItemFileListBinding
+
+class FileAdapter(
+    private var files: List<FileItem>,
+    var isGridMode: Boolean = true,
+    private val onItemClick: (FileItem) -> Unit,
+    private val onFavoriteToggle: (FileItem) -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    fun updateData(newFiles: List<FileItem>) {
+        files = newFiles
+        notifyDataSetChanged()
+    }
+
+    override fun getItemViewType(position: Int): Int {
+        return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == VIEW_TYPE_GRID) {
+            val binding = ItemFileGridBinding.inflate(inflater, parent, false)
+            GridViewHolder(binding)
+        } else {
+            val binding = ItemFileListBinding.inflate(inflater, parent, false)
+            ListViewHolder(binding)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val item = files[position]
+        if (holder is GridViewHolder) {
+            holder.bind(item)
+        } else if (holder is ListViewHolder) {
+            holder.bind(item)
+        }
+    }
+
+    override fun getItemCount(): Int = files.size
+
+    inner class GridViewHolder(private val binding: ItemFileGridBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: FileItem) {
+            binding.tvFileName.text = item.name
+            binding.tvFileSize.text = item.formattedSize
+            binding.ivIcon.setImageResource(getCategoryIcon(item.category))
+
+            val starRes = if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+            binding.ivFavorite.setImageResource(starRes)
+
+            binding.root.setOnClickListener { onItemClick(item) }
+            binding.ivFavorite.setOnClickListener { onFavoriteToggle(item) }
+        }
+    }
+
+    inner class ListViewHolder(private val binding: ItemFileListBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: FileItem) {
+            binding.tvFileNameList.text = item.name
+            binding.tvFileMetaList.text = "${item.formattedSize} • ${item.category.name}"
+            binding.ivIconList.setImageResource(getCategoryIcon(item.category))
+
+            val starRes = if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+            binding.ivFavoriteList.setImageResource(starRes)
+
+            binding.root.setOnClickListener { onItemClick(item) }
+            binding.ivFavoriteList.setOnClickListener { onFavoriteToggle(item) }
+        }
+    }
+
+    private fun getCategoryIcon(category: FileCategory): Int {
+        return when (category) {
+            FileCategory.PHOTOS -> R.drawable.ic_photo
+            FileCategory.VIDEOS -> R.drawable.ic_video
+            FileCategory.PDFS -> R.drawable.ic_pdf
+            FileCategory.DOCS -> R.drawable.ic_doc
+            FileCategory.AUDIO -> R.drawable.ic_audio
+            FileCategory.ALL -> R.drawable.ic_folder
+        }
+    }
+
+    companion object {
+        const val VIEW_TYPE_GRID = 1
+        const val VIEW_TYPE_LIST = 2
+    }
+}

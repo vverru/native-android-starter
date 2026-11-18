@@ -1,74 +1,51 @@
-# 📱 Native Android Starter App (Kotlin + GitHub Actions CI)
+# 🛡️ VaultX — Unlimited Cloud Storage (Telegram MTProto Backend)
 
-A lightweight, modern native Android application built using **Kotlin**, **Material 3**, and **ViewBinding**, pre-configured with **GitHub Actions CI/CD** to automatically build and generate APKs in the cloud.
-
----
-
-## 🚀 How to Build APK on GitHub (Zero Local Setup)
-
-Follow these simple steps to push this code to your GitHub account and download the compiled APK:
-
-### 1. Create a New Repository on GitHub
-1. Open [github.com/new](https://github.com/new) in your browser.
-2. Enter a repository name (e.g. `native-android-starter`).
-3. Keep it **Public** (or Private).
-4. Do **not** check "Add a README file" (we already have one).
-5. Click **Create repository**.
+> **"Unlimited free cloud storage powered by your own Telegram account."**  
+> Files are stored securely in a private Telegram channel owned by the **USER**, never on third-party servers. Zero server costs, zero user data collection.
 
 ---
 
-### 2. Push this Code from Termux to GitHub
+## 🌟 Key Features
 
-Run these commands inside this project directory:
+1. **∞ Unlimited Free Storage**: Files live in your personal private Telegram channel.
+2. **Built-in Media Streaming**:
+   - 🖼️ **Photo Viewer**: Fullscreen pinch-to-zoom and swipe.
+   - 🎬 **Video Player**: ExoPlayer / Media3 streaming with seekbar, buffer indicator & playback speed control (0.75x - 2.0x).
+   - 📄 **PDF & Documents**: In-app previews & system `Intent.ACTION_VIEW` for opening in Google Docs / WPS.
+3. **⭐ Universal Favorites System**: Star any photo, video, PDF, or document with a dedicated filterable Favorites tab.
+4. **🔄 Media Auto-Backup**:
+   - DCIM Camera photos & videos auto-sync via WorkManager.
+   - WhatsApp Media sync (PRO).
+5. **📦 Chunked Uploads for Files > 2GB**: Files larger than Telegram's 2GB free limit are split into 1.5GB chunks with SHA256 integrity metadata.
+6. **⏸️ Pause & Resume Uploads**: Persistent floating upload card with real-time transfer speed (`↑ 3.2 MB/s`), progress %, and Pause/Resume/Cancel.
+7. **🗑️ Trash Bin**: Soft-delete items to Trash with instant Restore or permanent Delete Forever.
+8. **🌐 Bilingual Support**: Full English + हिन्दी (Hindi) native localization.
 
-```bash
-cd /data/user/0/com.termux/files/home/.gemini/antigravity-cli/scratch/native-android-starter
+---
 
-# Initialize git repository
-git init -b main
+## 🏗️ Architecture
 
-# Add all files
-git add .
-
-# Commit changes
-git commit -m "Initial commit: Native Android Kotlin app with GitHub Actions"
-
-# Link your GitHub repository (replace with your repo URL)
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO_NAME>.git
-
-# Push to GitHub
-git push -u origin main
+```
+User's Phone (VaultX App)
+    │
+    ├── MTProto login (user's own Telegram account)
+    │     └── Session stored ONLY on device
+    │
+    ├── Private Vault Channel: auto-created on first setup
+    │     └── All files sent with metadata (Name, Size, Type, Chunks)
+    │
+    ├── Local Database: SQLite Room/OpenHelper
+    │     └── Stores file index, categories, favorites & trash
+    │
+    └── Download / Stream: direct streaming from Telegram servers
 ```
 
 ---
 
-### 3. Download the Generated APK
+## 🚀 How to Download Compiled APK
 
-1. Go to your repository on GitHub in your browser.
-2. Click on the **Actions** tab at the top.
-3. You will see a workflow running named **"Build Android APK"**.
-4. Wait ~2-3 minutes for the green checkmark (Build passed).
-5. Click on the completed workflow run.
-6. Scroll down to the **Artifacts** section at the bottom.
-7. Click on **`NativeStarterApp-Debug-APK`** to download your ready-to-install `.apk` file!
+The app compiles automatically in the cloud via GitHub Actions:
 
----
-
-## 🛠️ Project Structure
-
-```
-├── .github/workflows/
-│   └── build-apk.yml          # Automated CI/CD script for cloud APK generation
-├── app/
-│   ├── build.gradle.kts       # App module config (SDK 34, Kotlin, dependencies)
-│   └── src/main/
-│       ├── AndroidManifest.xml
-│       ├── java/com/example/starterapp/
-│       │   └── MainActivity.kt # Kotlin logic & interactive click listener
-│       └── res/
-│           ├── layout/activity_main.xml # Material 3 responsive layout
-│           └── values/ (colors, strings, themes)
-├── gradle/wrapper/            # Gradle 8.7 wrapper
-├── build.gradle.kts           # Root build configuration
-└── settings.gradle.kts        # Repository management
-```
+1. Open the [Actions tab](https://github.com/vverru/native-android-starter/actions).
+2. Click on the latest workflow run: **Build Android APK**.
+3. Under the **Artifacts** section at the bottom, click **`VaultX-Unlimited-Cloud-Storage-APK`** to download the ready-to-install `.apk`!
