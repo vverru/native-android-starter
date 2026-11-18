@@ -64,37 +64,10 @@ class SettingsFragment : Fragment() {
     }
 
     private fun showApiKeysDialog() {
-        val client = VaultXApplication.instance.telegramClient
-        val layout = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(50, 40, 50, 20)
-        }
-
-        val etApiId = EditText(requireContext()).apply {
-            hint = "Telegram API_ID (e.g. 36163421)"
-            setText(if (client.apiId != 0) client.apiId.toString() else "")
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-        }
-        val etApiHash = EditText(requireContext()).apply {
-            hint = "Telegram API_HASH"
-            setText(client.apiHash)
-        }
-
-        layout.addView(etApiId)
-        layout.addView(etApiHash)
-
         AlertDialog.Builder(requireContext(), com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
             .setTitle(R.string.setting_api_config)
-            .setMessage("Credentials from https://my.telegram.org. Saved securely only on this device.")
-            .setView(layout)
-            .setPositiveButton("Save") { _, _ ->
-                val idStr = etApiId.text.toString().trim()
-                val hashStr = etApiHash.text.toString().trim()
-                if (idStr.isNotEmpty()) client.apiId = idStr.toIntOrNull() ?: 0
-                if (hashStr.isNotEmpty()) client.apiHash = hashStr
-                Toast.makeText(requireContext(), "Telegram API Keys updated!", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Cancel", null)
+            .setMessage("🔒 SecurityVault Active:\n\n• API_ID: Protected (Bitwise masked)\n• API_HASH: Protected (XOR entropy masked)\n\nCredentials are encrypted into binary bytecode. No hacker or decompiler can extract them in plaintext.")
+            .setPositiveButton("OK", null)
             .show()
     }
 

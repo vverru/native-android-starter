@@ -272,7 +272,7 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         tdClient?.send(
             TdApi.SendMessage(
                 targetChatId,
-                0,
+                null,
                 null,
                 null,
                 null,
