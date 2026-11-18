@@ -10,6 +10,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.vaultx.app.R
 import com.vaultx.app.VaultXApplication
+import com.vaultx.app.data.model.StorageBreakdown
 import com.vaultx.app.databinding.FragmentSettingsBinding
 import com.vaultx.app.ui.auth.AuthActivity
 import com.vaultx.app.ui.trash.TrashActivity
