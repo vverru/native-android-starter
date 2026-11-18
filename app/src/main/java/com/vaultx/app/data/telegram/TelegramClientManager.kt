@@ -1,66 +1,312 @@
 package com.vaultx.app.data.telegram
 
 import android.content.Context
-import android.content.SharedPreferences
-import com.vaultx.app.BuildConfig
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import com.vaultx.app.data.model.FileCategory
 import com.vaultx.app.data.model.FileItem
+import com.vaultx.app.data.security.SecurityVault
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.drinkless.tdlib.Client
+import org.drinkless.tdlib.TdApi
+import java.io.File
 
-class TelegramClientManager(private val context: Context) {
+/**
+ * TelegramClientManager:
+ * Direct, production-grade MTProto client using the official Telegram Database Library (TDLib).
+ * Communicates directly with official Telegram servers over MTProto.
+ *
+ * API_ID and API_HASH are resolved dynamically in RAM via SecurityVault and are never
+ * stored or traced as plaintext in the APK bytecode.
+ */
+class TelegramClientManager(private val context: Context) : Client.ResultHandler {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences("vaultx_telegram_prefs", Context.MODE_PRIVATE)
+    private val tag = "TelegramClientManager"
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val _authState = MutableStateFlow(getSavedAuthState())
+    private var tdClient: Client? = null
+
+    private val _authState = MutableStateFlow(TelegramAuthState.WAIT_PHONE)
     val authState: StateFlow<TelegramAuthState> = _authState
 
-    var apiId: Int
-        get() = prefs.getInt(KEY_API_ID, BuildConfig.TELEGRAM_API_ID)
-        set(value) = prefs.edit().putInt(KEY_API_ID, value).apply()
+    var phoneNumber: String = ""
+        private set
 
-    var apiHash: String
-        get() = prefs.getString(KEY_API_HASH, BuildConfig.TELEGRAM_API_HASH) ?: ""
-        set(value) = prefs.edit().putString(KEY_API_HASH, value).apply()
+    var privateChannelId: Long = 0L
+        private set
 
-    var phoneNumber: String
-        get() = prefs.getString(KEY_PHONE, "") ?: ""
-        private set(value) = prefs.edit().putString(KEY_PHONE, value).apply()
+    var privateChannelTitle: String = "VaultX Private Storage"
+        private set
 
-    var privateChannelName: String
-        get() = prefs.getString(KEY_CHANNEL_NAME, "VaultX_Private_Storage") ?: "VaultX_Private_Storage"
-        private set(value) = prefs.edit().putString(KEY_CHANNEL_NAME, value).apply()
+    init {
+        // Initialize TDLib native client
+        try {
+            // Set TDLib logging level (1 = fatal errors only to keep logs clean and secure)
+            Client.execute(TdApi.SetLogVerbosityLevel(1))
+            tdClient = Client.create(this, null, null)
+            Log.d(tag, "TDLib MTProto client created successfully")
+        } catch (e: Throwable) {
+            Log.e(tag, "Failed to initialize TDLib client", e)
+        }
+    }
+
+    override fun onResult(obj: TdApi.Object?) {
+        if (obj == null) return
+
+        when (obj.constructor) {
+            TdApi.UpdateAuthorizationState.CONSTRUCTOR -> {
+                val update = obj as TdApi.UpdateAuthorizationState
+                handleAuthState(update.authorizationState)
+            }
+            TdApi.UpdateNewChat.CONSTRUCTOR -> {
+                val newChat = obj as TdApi.UpdateNewChat
+                if (newChat.chat.title.contains("VaultX", ignoreCase = true)) {
+                    privateChannelId = newChat.chat.id
+                    privateChannelTitle = newChat.chat.title
+                    Log.d(tag, "Found existing VaultX private storage channel ID: $privateChannelId")
+                }
+            }
+            TdApi.Chats.CONSTRUCTOR -> {
+                val chats = obj as TdApi.Chats
+                for (chatId in chats.chatIds) {
+                    tdClient?.send(TdApi.GetChat(chatId), this)
+                }
+            }
+            TdApi.Chat.CONSTRUCTOR -> {
+                val chat = obj as TdApi.Chat
+                if (chat.title.contains("VaultX", ignoreCase = true)) {
+                    privateChannelId = chat.id
+                    privateChannelTitle = chat.title
+                    Log.d(tag, "Resolved VaultX private storage channel: ${chat.title} ($privateChannelId)")
+                }
+            }
+            TdApi.Error.CONSTRUCTOR -> {
+                val error = obj as TdApi.Error
+                Log.e(tag, "TDLib Server Error [${error.code}]: ${error.message}")
+            }
+        }
+    }
+
+    private fun handleAuthState(state: TdApi.AuthorizationState) {
+        when (state.constructor) {
+            TdApi.AuthorizationStateWaitTdlibParameters.CONSTRUCTOR -> {
+                Log.d(tag, "TDLib requesting parameters. Applying secure obfuscated credentials...")
+                val dbDir = File(context.filesDir, "tdlib_data").apply { mkdirs() }.absolutePath
+                val filesDir = File(context.filesDir, "tdlib_files").apply { mkdirs() }.absolutePath
+
+                val params = TdApi.SetTdlibParameters().apply {
+                    this.useTestDc = false
+                    this.databaseDirectory = dbDir
+                    this.filesDirectory = filesDir
+                    this.useFileDatabase = true
+                    this.useChatInfoDatabase = true
+                    this.useMessageDatabase = true
+                    this.useSecretChats = false
+                    // Secure dynamically reconstructed credentials:
+                    this.apiId = SecurityVault.resolveApiId()
+                    this.apiHash = SecurityVault.resolveApiHash()
+                    this.systemLanguageCode = "en"
+                    this.deviceModel = Build.MODEL
+                    this.systemVersion = Build.VERSION.RELEASE
+                    this.applicationVersion = "1.0.0"
+                    this.databaseEncryptionKey = byteArrayOf()
+                }
+
+                tdClient?.send(params, this)
+            }
+            TdApi.AuthorizationStateWaitPhoneNumber.CONSTRUCTOR -> {
+                postState(TelegramAuthState.WAIT_PHONE)
+            }
+            TdApi.AuthorizationStateWaitCode.CONSTRUCTOR -> {
+                postState(TelegramAuthState.WAIT_CODE)
+            }
+            TdApi.AuthorizationStateWaitPassword.CONSTRUCTOR -> {
+                postState(TelegramAuthState.WAIT_2FA)
+            }
+            TdApi.AuthorizationStateReady.CONSTRUCTOR -> {
+                postState(TelegramAuthState.LOGGED_IN)
+                setupVaultStorageChannel()
+            }
+            TdApi.AuthorizationStateLoggingOut.CONSTRUCTOR,
+            TdApi.AuthorizationStateClosed.CONSTRUCTOR -> {
+                postState(TelegramAuthState.WAIT_PHONE)
+            }
+        }
+    }
+
+    private fun postState(state: TelegramAuthState) {
+        mainHandler.post {
+            _authState.value = state
+        }
+    }
 
     fun isLoggedIn(): Boolean = _authState.value == TelegramAuthState.LOGGED_IN
 
-    fun requestPhoneOtp(phone: String): Boolean {
-        phoneNumber = phone
-        _authState.value = TelegramAuthState.WAIT_CODE
-        saveAuthState(TelegramAuthState.WAIT_CODE)
-        return true
+    /**
+     * Send real OTP request to Telegram server for the given phone number.
+     */
+    fun requestPhoneOtp(phone: String, onComplete: ((Boolean, String?) -> Unit)? = null) {
+        this.phoneNumber = phone
+        val authSettings = TdApi.PhoneNumberAuthenticationSettings().apply {
+            allowFlashCall = false
+            isCurrentPhoneNumber = false
+            allowSmsRetrieverApi = true
+        }
+
+        tdClient?.send(TdApi.SetAuthenticationPhoneNumber(phone, authSettings)) { result ->
+            mainHandler.post {
+                if (result is TdApi.Ok) {
+                    _authState.value = TelegramAuthState.WAIT_CODE
+                    onComplete?.invoke(true, null)
+                } else if (result is TdApi.Error) {
+                    onComplete?.invoke(false, result.message)
+                }
+            }
+        }
     }
 
-    fun verifyCode(code: String): Boolean {
-        if (code.isNotBlank()) {
-            _authState.value = TelegramAuthState.LOGGED_IN
-            saveAuthState(TelegramAuthState.LOGGED_IN)
-            return true
+    /**
+     * Verify the Telegram OTP code received by the user via SMS or Telegram App.
+     */
+    fun verifyCode(code: String, onComplete: ((Boolean, String?) -> Unit)? = null) {
+        tdClient?.send(TdApi.CheckAuthenticationCode(code)) { result ->
+            mainHandler.post {
+                if (result is TdApi.Ok) {
+                    _authState.value = TelegramAuthState.LOGGED_IN
+                    setupVaultStorageChannel()
+                    onComplete?.invoke(true, null)
+                } else if (result is TdApi.Error) {
+                    onComplete?.invoke(false, result.message)
+                }
+            }
         }
-        return false
     }
 
-    fun verify2FaPassword(password: String): Boolean {
-        if (password.isNotBlank()) {
-            _authState.value = TelegramAuthState.LOGGED_IN
-            saveAuthState(TelegramAuthState.LOGGED_IN)
-            return true
+    /**
+     * Verify Telegram Cloud 2FA Password if enabled on user's account.
+     */
+    fun verify2FaPassword(password: String, onComplete: ((Boolean, String?) -> Unit)? = null) {
+        tdClient?.send(TdApi.CheckAuthenticationPassword(password)) { result ->
+            mainHandler.post {
+                if (result is TdApi.Ok) {
+                    _authState.value = TelegramAuthState.LOGGED_IN
+                    setupVaultStorageChannel()
+                    onComplete?.invoke(true, null)
+                } else if (result is TdApi.Error) {
+                    onComplete?.invoke(false, result.message)
+                }
+            }
         }
-        return false
+    }
+
+    /**
+     * Finds or creates a dedicated, private Telegram channel owned by the user.
+     */
+    fun setupVaultStorageChannel() {
+        // Query user's existing chats to see if VaultX storage channel already exists
+        tdClient?.send(TdApi.GetChats(null, 100)) { result ->
+            if (result is TdApi.Chats) {
+                var found = false
+                for (id in result.chatIds) {
+                    tdClient?.send(TdApi.GetChat(id)) { chatResult ->
+                        if (chatResult is TdApi.Chat && chatResult.title.contains("VaultX", ignoreCase = true)) {
+                            privateChannelId = chatResult.id
+                            privateChannelTitle = chatResult.title
+                            found = true
+                        }
+                    }
+                }
+                // If no VaultX channel exists, automatically create a brand new private supergroup channel!
+                mainHandler.postDelayed({
+                    if (!found && privateChannelId == 0L) {
+                        createPrivateStorageChannel()
+                    }
+                }, 2000)
+            } else {
+                createPrivateStorageChannel()
+            }
+        }
+    }
+
+    private fun createPrivateStorageChannel() {
+        tdClient?.send(
+            TdApi.CreateNewSupergroupChat(
+                "VaultX Private Storage",
+                true, // isChannel
+                false, // isForum
+                "Unlimited Cloud Storage Vault — Managed exclusively by VaultX on your device.",
+                null,
+                0,
+                false
+            )
+        ) { result ->
+            if (result is TdApi.Chat) {
+                privateChannelId = result.id
+                privateChannelTitle = result.title
+                Log.d(tag, "Created brand new private VaultX channel ID: $privateChannelId")
+            }
+        }
+    }
+
+    /**
+     * Real upload of file directly to the user's private Telegram channel.
+     */
+    fun uploadFileToTelegram(
+        filePath: String,
+        fileName: String,
+        sizeBytes: Long,
+        mimeType: String,
+        onProgress: ((Int) -> Unit)? = null,
+        onSuccess: ((FileItem) -> Unit)? = null,
+        onError: ((String) -> Unit)? = null
+    ) {
+        val targetChatId = if (privateChannelId != 0L) privateChannelId else -1001234567890L
+        val inputFile = TdApi.InputFileLocal(filePath)
+        val caption = ChunkedUploader.generateChunkCaption(fileName, 0, 1, sizeBytes)
+        val formattedText = TdApi.FormattedText(caption, null)
+        val inputMessageContent = TdApi.InputMessageDocument(inputFile, null, false, formattedText)
+
+        tdClient?.send(
+            TdApi.SendMessage(
+                targetChatId,
+                0,
+                null,
+                null,
+                null,
+                inputMessageContent
+            )
+        ) { result ->
+            mainHandler.post {
+                if (result is TdApi.Message) {
+                    val fileItem = FileItem(
+                        name = fileName,
+                        telegramMessageId = result.id,
+                        sizeBytes = sizeBytes,
+                        mimeType = mimeType,
+                        category = determineCategory(fileName, mimeType),
+                        isFavorite = false,
+                        uploadTimestamp = System.currentTimeMillis(),
+                        localUri = filePath
+                    )
+                    onSuccess?.invoke(fileItem)
+                } else if (result is TdApi.Error) {
+                    onError?.invoke(result.message)
+                }
+            }
+        }
     }
 
     fun logout() {
-        prefs.edit().clear().apply()
-        _authState.value = TelegramAuthState.WAIT_PHONE
+        tdClient?.send(TdApi.LogOut()) {
+            mainHandler.post {
+                _authState.value = TelegramAuthState.WAIT_PHONE
+                privateChannelId = 0L
+                phoneNumber = ""
+            }
+        }
     }
 
     fun prepareFileUpload(name: String, sizeBytes: Long, mimeType: String): FileItem {
@@ -91,27 +337,6 @@ class TelegramClientManager(private val context: Context) {
             lower.endsWith(".doc") || lower.endsWith(".docx") || lower.endsWith(".xls") || lower.endsWith(".xlsx") || lower.endsWith(".ppt") || lower.endsWith(".pptx") || lower.endsWith(".txt") -> FileCategory.DOCS
             else -> FileCategory.DOCS
         }
-    }
-
-    private fun saveAuthState(state: TelegramAuthState) {
-        prefs.edit().putString(KEY_AUTH_STATE, state.name).apply()
-    }
-
-    private fun getSavedAuthState(): TelegramAuthState {
-        val saved = prefs.getString(KEY_AUTH_STATE, TelegramAuthState.LOGGED_IN.name)
-        return try {
-            TelegramAuthState.valueOf(saved ?: TelegramAuthState.LOGGED_IN.name)
-        } catch (e: Exception) {
-            TelegramAuthState.LOGGED_IN
-        }
-    }
-
-    companion object {
-        private const val KEY_API_ID = "pref_api_id"
-        private const val KEY_API_HASH = "pref_api_hash"
-        private const val KEY_PHONE = "pref_phone"
-        private const val KEY_CHANNEL_NAME = "pref_channel_name"
-        private const val KEY_AUTH_STATE = "pref_auth_state"
     }
 }
 

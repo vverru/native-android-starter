@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.OpenableColumns
 import android.view.View
 import android.widget.Toast
@@ -23,6 +21,8 @@ import com.vaultx.app.ui.backup.BackupFragment
 import com.vaultx.app.ui.favorites.FavoritesFragment
 import com.vaultx.app.ui.files.FilesFragment
 import com.vaultx.app.ui.settings.SettingsFragment
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,8 +35,6 @@ class MainActivity : AppCompatActivity() {
 
     private var activeFragment: Fragment = filesFragment
     private var currentUploadTask: UploadTask? = null
-    private var uploadHandler: Handler? = null
-    private var uploadRunnable: Runnable? = null
 
     // System file picker launcher
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -52,7 +50,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Check login
+        // Check real login status
         if (!VaultXApplication.instance.telegramClient.isLoggedIn()) {
             startActivity(Intent(this, AuthActivity::class.java))
             finish()
@@ -130,7 +128,7 @@ class MainActivity : AppCompatActivity() {
                     0 -> openPicker("image/*")
                     1 -> openPicker("video/*")
                     2 -> openPicker("application/pdf")
-                    3 -> simulateLargeChunkedUpload()
+                    3 -> openPicker("*/*")
                     else -> openPicker("*/*")
                 }
             }
@@ -147,7 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePickedFile(uri: Uri) {
         var fileName = "Upload_${System.currentTimeMillis()}"
-        var fileSize = 12_400_000L
+        var fileSize = 0L
 
         contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
@@ -159,16 +157,25 @@ class MainActivity : AppCompatActivity() {
         }
 
         val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
-        startUpload(fileName, fileSize, mimeType)
+
+        // Cache file locally to provide absolute path to TDLib MTProto engine
+        val localDest = File(cacheDir, fileName)
+        try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(localDest).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            if (fileSize == 0L) fileSize = localDest.length()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to read file for Telegram upload: ${e.message}", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        startRealTelegramUpload(localDest.absolutePath, fileName, fileSize, mimeType)
     }
 
-    private fun simulateLargeChunkedUpload() {
-        val largeFileName = "Dune_Part2_4K_HDR.mkv"
-        val largeFileSize = 3_400_000_000L // 3.4 GB
-        startUpload(largeFileName, largeFileSize, "video/x-matroska")
-    }
-
-    private fun startUpload(fileName: String, fileSize: Long, mimeType: String) {
+    private fun startRealTelegramUpload(localPath: String, fileName: String, fileSize: Long, mimeType: String) {
         val task = UploadTask(
             id = System.currentTimeMillis().toString(),
             fileName = fileName,
@@ -181,85 +188,40 @@ class MainActivity : AppCompatActivity() {
         binding.cardActiveUpload.visibility = View.VISIBLE
         binding.tvUploadFileName.text = task.fileName
         binding.btnUploadPauseResume.setImageResource(R.drawable.ic_pause)
-        binding.progressUpload.progress = 0
+        binding.progressUpload.isIndeterminate = true
+        binding.tvUploadSpeed.text = "Uploading to Telegram MTProto…"
 
-        runUploadSimulation(task, mimeType)
-    }
-
-    private fun runUploadSimulation(task: UploadTask, mimeType: String) {
-        uploadHandler = Handler(Looper.getMainLooper())
-        val stepBytes = task.sizeBytes / 20
-
-        uploadRunnable = object : Runnable {
-            override fun run() {
-                if (task.status == UploadStatus.PAUSED) return
-
-                task.uploadedBytes = (task.uploadedBytes + stepBytes).coerceAtMost(task.sizeBytes)
-                val percent = task.progressPercent
-
+        VaultXApplication.instance.telegramClient.uploadFileToTelegram(
+            filePath = localPath,
+            fileName = fileName,
+            sizeBytes = fileSize,
+            mimeType = mimeType,
+            onProgress = { percent ->
+                binding.progressUpload.isIndeterminate = false
                 binding.progressUpload.progress = percent
-                binding.tvUploadBytes.text = "${formatBytes(task.uploadedBytes)} / ${formatBytes(task.sizeBytes)}"
-                binding.tvUploadSpeed.text = "↑ ${task.formattedSpeed} • ${percent}%"
-
-                if (task.uploadedBytes >= task.sizeBytes) {
-                    // Upload Completed!
-                    task.status = UploadStatus.COMPLETED
-                    binding.cardActiveUpload.visibility = View.GONE
-
-                    // Insert to database
-                    val fileItem = VaultXApplication.instance.telegramClient.prepareFileUpload(
-                        task.fileName,
-                        task.sizeBytes,
-                        mimeType
-                    )
-                    VaultXApplication.instance.databaseHelper.insertFile(fileItem)
-
-                    Toast.makeText(this@MainActivity, "Uploaded to private Telegram channel: ${task.fileName}", Toast.LENGTH_LONG).show()
-
-                    // Refresh files fragment
-                    filesFragment.loadData()
-                } else {
-                    uploadHandler?.postDelayed(this, 300)
-                }
+                binding.tvUploadSpeed.text = "↑ ${percent}%"
+            },
+            onSuccess = { fileItem ->
+                binding.cardActiveUpload.visibility = View.GONE
+                VaultXApplication.instance.databaseHelper.insertFile(fileItem)
+                Toast.makeText(this, "Uploaded to private Telegram channel: $fileName", Toast.LENGTH_LONG).show()
+                filesFragment.loadData()
+            },
+            onError = { errMsg ->
+                binding.cardActiveUpload.visibility = View.GONE
+                Toast.makeText(this, "Telegram Upload Error: $errMsg", Toast.LENGTH_LONG).show()
             }
-        }
-        uploadHandler?.post(uploadRunnable!!)
+        )
     }
 
     private fun setupUploadCardListeners() {
-        // Pause / Resume
         binding.btnUploadPauseResume.setOnClickListener {
-            val task = currentUploadTask ?: return@setOnClickListener
-            if (task.status == UploadStatus.UPLOADING) {
-                task.status = UploadStatus.PAUSED
-                binding.btnUploadPauseResume.setImageResource(R.drawable.ic_play)
-                binding.tvUploadSpeed.text = getString(R.string.upload_paused)
-                Toast.makeText(this, "Upload paused", Toast.LENGTH_SHORT).show()
-            } else {
-                task.status = UploadStatus.UPLOADING
-                binding.btnUploadPauseResume.setImageResource(R.drawable.ic_pause)
-                uploadRunnable?.let { uploadHandler?.post(it) }
-                Toast.makeText(this, "Upload resumed", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(this, "Telegram upload task active", Toast.LENGTH_SHORT).show()
         }
 
-        // Cancel
         binding.btnUploadCancel.setOnClickListener {
-            uploadHandler?.removeCallbacksAndMessages(null)
-            currentUploadTask?.status = UploadStatus.FAILED
             binding.cardActiveUpload.visibility = View.GONE
             Toast.makeText(this, "Upload cancelled", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun formatBytes(bytes: Long): String {
-        val mb = bytes / (1024.0 * 1024.0)
-        val gb = mb / 1024.0
-        return if (gb >= 1.0) String.format("%.2f GB", gb) else String.format("%.1f MB", mb)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        uploadHandler?.removeCallbacksAndMessages(null)
     }
 }

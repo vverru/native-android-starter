@@ -25,11 +25,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val apiId = localProperties.getProperty("TELEGRAM_API_ID", "0")
-        val apiHash = localProperties.getProperty("TELEGRAM_API_HASH", "")
-
-        buildConfigField("int", "TELEGRAM_API_ID", apiId)
-        buildConfigField("String", "TELEGRAM_API_HASH", "\"$apiHash\"")
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     buildTypes {
@@ -55,6 +53,12 @@ android {
         viewBinding = true
         buildConfig = true
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
@@ -72,4 +76,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
+
+    // Official Telegram Database Library (TDLib) with prebuilt JNI .so binaries
+    implementation("com.github.tdlibx:td:1.8.56")
 }
