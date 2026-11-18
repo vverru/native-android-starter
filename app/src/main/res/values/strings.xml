@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Native Starter App</string>
+    <string name="welcome_title">Welcome to your Native Android App!</string>
+    <string name="welcome_subtitle">Built with Kotlin &amp; Material 3</string>
+    <string name="click_count_text">Button clicks: %1$d</string>
+    <string name="btn_click_me">Tap Me</string>
+    <string name="btn_reset">Reset</string>
+    <string name="about_heading">About this App</string>
+    <string name="about_body">This native Android app was compiled automatically using GitHub Actions CI/CD. Zero local build dependencies required!</string>
+</resources>
