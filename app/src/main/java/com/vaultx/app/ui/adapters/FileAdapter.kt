@@ -1,13 +1,16 @@
 package com.vaultx.app.ui.adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.vaultx.app.R
 import com.vaultx.app.data.model.FileCategory
 import com.vaultx.app.data.model.FileItem
 import com.vaultx.app.databinding.ItemFileGridBinding
 import com.vaultx.app.databinding.ItemFileListBinding
+import java.io.File
 
 class FileAdapter(
     private var files: List<FileItem>,
@@ -51,7 +54,33 @@ class FileAdapter(
         fun bind(item: FileItem) {
             binding.tvFileName.text = item.name
             binding.tvFileSize.text = item.formattedSize
-            binding.ivIcon.setImageResource(getCategoryIcon(item.category))
+
+            val placeholderIcon = getCategoryIcon(item.category)
+
+            if ((item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) && item.localUri != null) {
+                val file = File(item.localUri)
+                if (file.exists()) {
+                    Glide.with(itemView.context)
+                        .load(file)
+                        .centerCrop()
+                        .placeholder(placeholderIcon)
+                        .error(placeholderIcon)
+                        .into(binding.ivIcon)
+                } else {
+                    Glide.with(itemView.context)
+                        .load(item.localUri)
+                        .centerCrop()
+                        .placeholder(placeholderIcon)
+                        .error(placeholderIcon)
+                        .into(binding.ivIcon)
+                }
+            } else {
+                binding.ivIcon.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                binding.ivIcon.setImageResource(placeholderIcon)
+            }
+
+            // Video play icon badge
+            binding.ivPlayBadge.visibility = if (item.category == FileCategory.VIDEOS) View.VISIBLE else View.GONE
 
             val starRes = if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
             binding.ivFavorite.setImageResource(starRes)
@@ -65,7 +94,30 @@ class FileAdapter(
         fun bind(item: FileItem) {
             binding.tvFileNameList.text = item.name
             binding.tvFileMetaList.text = "${item.formattedSize} • ${item.category.name}"
-            binding.ivIconList.setImageResource(getCategoryIcon(item.category))
+
+            val placeholderIcon = getCategoryIcon(item.category)
+
+            if ((item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) && item.localUri != null) {
+                val file = File(item.localUri)
+                if (file.exists()) {
+                    Glide.with(itemView.context)
+                        .load(file)
+                        .centerCrop()
+                        .placeholder(placeholderIcon)
+                        .error(placeholderIcon)
+                        .into(binding.ivIconList)
+                } else {
+                    Glide.with(itemView.context)
+                        .load(item.localUri)
+                        .centerCrop()
+                        .placeholder(placeholderIcon)
+                        .error(placeholderIcon)
+                        .into(binding.ivIconList)
+                }
+            } else {
+                binding.ivIconList.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                binding.ivIconList.setImageResource(placeholderIcon)
+            }
 
             val starRes = if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
             binding.ivFavoriteList.setImageResource(starRes)

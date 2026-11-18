@@ -144,6 +144,14 @@ class FilesFragment : Fragment() {
         recentAdapter.updateData(recents)
         fileAdapter.updateData(files)
 
+        if (recents.isEmpty()) {
+            binding.tvRecentHeader.visibility = View.GONE
+            binding.rvRecentFiles.visibility = View.GONE
+        } else {
+            binding.tvRecentHeader.visibility = View.VISIBLE
+            binding.rvRecentFiles.visibility = View.VISIBLE
+        }
+
         if (files.isEmpty()) {
             binding.layoutEmptyFiles.visibility = View.VISIBLE
             binding.rvFiles.visibility = View.GONE
@@ -160,6 +168,7 @@ class FilesFragment : Fragment() {
                     putExtra("file_name", file.name)
                     putExtra("file_size", file.formattedSize)
                     putExtra("file_id", file.id)
+                    putExtra("file_uri", file.localUri)
                     putExtra("is_fav", file.isFavorite)
                 }
                 startActivity(intent)
@@ -168,6 +177,7 @@ class FilesFragment : Fragment() {
                 val intent = Intent(requireContext(), VideoPlayerActivity::class.java).apply {
                     putExtra("file_name", file.name)
                     putExtra("file_id", file.id)
+                    putExtra("file_uri", file.localUri)
                 }
                 startActivity(intent)
             }

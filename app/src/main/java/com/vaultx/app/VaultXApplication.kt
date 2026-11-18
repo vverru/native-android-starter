@@ -18,8 +18,8 @@ class VaultXApplication : Application() {
         databaseHelper = VaultDatabaseHelper(this)
         telegramClient = TelegramClientManager(this)
 
-        // Populate sample starter data if fresh database
-        databaseHelper.populateInitialDataIfNeeded()
+        // Purge any old dummy sample data so only real user files are shown
+        databaseHelper.purgeDummyData()
     }
 
     companion object {

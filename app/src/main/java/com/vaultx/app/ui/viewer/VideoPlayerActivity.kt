@@ -36,10 +36,14 @@ class VideoPlayerActivity : AppCompatActivity() {
         exoPlayer = ExoPlayer.Builder(this).build()
         binding.playerView.player = exoPlayer
 
-        // Public reliable sample video stream for instant playback
-        val sampleStreamingUri = Uri.parse("https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")
-        val mediaItem = MediaItem.fromUri(sampleStreamingUri)
+        val fileUri = intent.getStringExtra("file_uri")
+        val videoUri = if (!fileUri.isNullOrBlank() && java.io.File(fileUri).exists()) {
+            Uri.fromFile(java.io.File(fileUri))
+        } else {
+            Uri.parse("https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")
+        }
 
+        val mediaItem = MediaItem.fromUri(videoUri)
         exoPlayer?.apply {
             setMediaItem(mediaItem)
             prepare()

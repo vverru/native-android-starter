@@ -83,6 +83,7 @@ class FavoritesFragment : Fragment() {
                     putExtra("file_name", file.name)
                     putExtra("file_size", file.formattedSize)
                     putExtra("file_id", file.id)
+                    putExtra("file_uri", file.localUri)
                     putExtra("is_fav", true)
                 }
                 startActivity(intent)
@@ -91,6 +92,7 @@ class FavoritesFragment : Fragment() {
                 val intent = Intent(requireContext(), VideoPlayerActivity::class.java).apply {
                     putExtra("file_name", file.name)
                     putExtra("file_id", file.id)
+                    putExtra("file_uri", file.localUri)
                 }
                 startActivity(intent)
             }

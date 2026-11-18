@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
 import com.vaultx.app.R
 import com.vaultx.app.VaultXApplication
 import com.vaultx.app.databinding.ActivityPhotoViewerBinding
+import java.io.File
 
 class PhotoViewerActivity : AppCompatActivity() {
 
@@ -21,12 +23,35 @@ class PhotoViewerActivity : AppCompatActivity() {
 
         val fileName = intent.getStringExtra("file_name") ?: "Photo"
         val fileSize = intent.getStringExtra("file_size") ?: ""
+        val fileUri = intent.getStringExtra("file_uri")
         fileId = intent.getLongExtra("file_id", 0)
         isFav = intent.getBooleanExtra("is_fav", false)
 
         binding.tvViewerFileName.text = fileName
         binding.tvViewerFileSize.text = fileSize
         updateFavIcon()
+
+        // Load the actual image using Glide
+        if (!fileUri.isNullOrBlank()) {
+            val file = File(fileUri)
+            if (file.exists()) {
+                Glide.with(this)
+                    .load(file)
+                    .fitCenter()
+                    .placeholder(R.drawable.ic_photo)
+                    .error(R.drawable.ic_photo)
+                    .into(binding.ivFullscreenPhoto)
+            } else {
+                Glide.with(this)
+                    .load(fileUri)
+                    .fitCenter()
+                    .placeholder(R.drawable.ic_photo)
+                    .error(R.drawable.ic_photo)
+                    .into(binding.ivFullscreenPhoto)
+            }
+        } else {
+            binding.ivFullscreenPhoto.setImageResource(R.drawable.ic_photo)
+        }
 
         binding.btnPhotoBack.setOnClickListener { finish() }
 

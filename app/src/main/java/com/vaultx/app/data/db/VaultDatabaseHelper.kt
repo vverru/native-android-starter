@@ -192,26 +192,20 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         return list
     }
 
-    fun populateInitialDataIfNeeded() {
-        val db = readableDatabase
-        val countCursor = db.rawQuery("SELECT COUNT(*) FROM $TABLE_FILES", null)
-        var count = 0
-        if (countCursor.moveToFirst()) {
-            count = countCursor.getInt(0)
-        }
-        countCursor.close()
-
-        if (count == 0) {
-            val now = System.currentTimeMillis()
-            val sampleFiles = listOf(
-                FileItem(name = "Kashmir_Trek_2026.jpg", sizeBytes = 8_420_000, mimeType = "image/jpeg", category = FileCategory.PHOTOS, isFavorite = true, uploadTimestamp = now - 1000 * 60 * 30),
-                FileItem(name = "Interstellar_4K_HDR.mkv", sizeBytes = 3_840_000_000, mimeType = "video/x-matroska", category = FileCategory.VIDEOS, isFavorite = true, uploadTimestamp = now - 1000 * 60 * 120, chunkCount = 3),
-                FileItem(name = "Financial_Plan_2026_Q4.pdf", sizeBytes = 2_450_000, mimeType = "application/pdf", category = FileCategory.PDFS, isFavorite = false, uploadTimestamp = now - 1000 * 60 * 360),
-                FileItem(name = "Thesis_Draft_Final.docx", sizeBytes = 1_120_000, mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", category = FileCategory.DOCS, isFavorite = false, uploadTimestamp = now - 1000 * 60 * 600),
-                FileItem(name = "Podcast_Episode_42.mp3", sizeBytes = 64_000_000, mimeType = "audio/mpeg", category = FileCategory.AUDIO, isFavorite = true, uploadTimestamp = now - 1000 * 60 * 900)
+    fun purgeDummyData() {
+        val db = writableDatabase
+        // Remove old dummy sample records completely
+        db.delete(
+            TABLE_FILES,
+            "$COL_NAME IN (?, ?, ?, ?, ?) OR ($COL_LOCAL_URI IS NULL AND $COL_TELEGRAM_MSG_ID = 0)",
+            arrayOf(
+                "Kashmir_Trek_2026.jpg",
+                "Interstellar_4K_HDR.mkv",
+                "Financial_Plan_2026_Q4.pdf",
+                "Thesis_Draft_Final.docx",
+                "Podcast_Episode_42.mp3"
             )
-            sampleFiles.forEach { insertFile(it) }
-        }
+        )
     }
 
     companion object {

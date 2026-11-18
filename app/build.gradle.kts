@@ -79,4 +79,7 @@ dependencies {
 
     // Official Telegram Database Library (TDLib) with prebuilt JNI .so binaries
     implementation("com.github.tdlibx:td:1.8.56")
+
+    // Glide for high-performance image & video thumbnail loading
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 }
