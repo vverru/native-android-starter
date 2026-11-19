@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.vaultx.app.R
 import com.vaultx.app.VaultXApplication
+import com.vaultx.app.data.model.FileItem
 import com.vaultx.app.data.model.UploadStatus
 import com.vaultx.app.data.model.UploadTask
 import com.vaultx.app.databinding.ActivityMainBinding
