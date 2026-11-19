@@ -11,6 +11,7 @@ data class FileItem(
     var isTrash: Boolean = false,
     val uploadTimestamp: Long = System.currentTimeMillis(),
     var localUri: String? = null,
+    var thumbnailUri: String? = null,
     val chunkCount: Int = 1
 ) {
     val formattedSize: String

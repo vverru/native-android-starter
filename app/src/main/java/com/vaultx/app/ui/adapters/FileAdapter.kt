@@ -71,20 +71,24 @@ class FileAdapter(
             binding.tvFileSize.text = item.formattedSize
 
             val placeholderIcon = getCategoryIcon(item.category)
-            val isLocal = !item.localUri.isNullOrBlank() && File(item.localUri!!).exists()
+            val isPhotoOrVideo = item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS || isImageOrVideo(item.name)
 
-            if (isLocal) {
-                val file = File(item.localUri!!)
-                if (item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) {
+            // Resilient lookup: check localUri -> thumbnailUri -> vault_files folder
+            val previewFile = item.localUri?.let { File(it) }?.takeIf { it.exists() }
+                ?: item.thumbnailUri?.let { File(it) }?.takeIf { it.exists() }
+                ?: findLocalVaultFile(itemView.context, item.name)
+
+            if (previewFile != null) {
+                if (isPhotoOrVideo) {
                     binding.ivIcon.scaleType = ImageView.ScaleType.CENTER_CROP
                     Glide.with(itemView.context)
-                        .load(file)
+                        .load(previewFile)
                         .centerCrop()
                         .placeholder(placeholderIcon)
                         .error(placeholderIcon)
                         .into(binding.ivIcon)
                 } else if (item.category == FileCategory.PDFS || item.name.lowercase().endsWith(".pdf")) {
-                    renderPdfThumbnail(file, binding.ivIcon, placeholderIcon)
+                    renderPdfThumbnail(previewFile, binding.ivIcon, placeholderIcon)
                 } else {
                     binding.ivIcon.scaleType = ImageView.ScaleType.FIT_CENTER
                     binding.ivIcon.setImageResource(placeholderIcon)
@@ -95,7 +99,7 @@ class FileAdapter(
             }
 
             // Video play icon badge
-            binding.ivPlayBadge.visibility = if (item.category == FileCategory.VIDEOS) View.VISIBLE else View.GONE
+            binding.ivPlayBadge.visibility = if (item.category == FileCategory.VIDEOS || item.name.lowercase().endsWith(".mp4") || item.name.lowercase().endsWith(".mkv")) View.VISIBLE else View.GONE
 
             val starRes = if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
             binding.ivFavorite.setImageResource(starRes)
@@ -122,20 +126,23 @@ class FileAdapter(
             binding.tvFileMetaList.text = "${item.formattedSize} • ${item.category.name}"
 
             val placeholderIcon = getCategoryIcon(item.category)
-            val isLocal = !item.localUri.isNullOrBlank() && File(item.localUri!!).exists()
+            val isPhotoOrVideo = item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS || isImageOrVideo(item.name)
 
-            if (isLocal) {
-                val file = File(item.localUri!!)
-                if (item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) {
+            val previewFile = item.localUri?.let { File(it) }?.takeIf { it.exists() }
+                ?: item.thumbnailUri?.let { File(it) }?.takeIf { it.exists() }
+                ?: findLocalVaultFile(itemView.context, item.name)
+
+            if (previewFile != null) {
+                if (isPhotoOrVideo) {
                     binding.ivIconList.scaleType = ImageView.ScaleType.CENTER_CROP
                     Glide.with(itemView.context)
-                        .load(file)
+                        .load(previewFile)
                         .centerCrop()
                         .placeholder(placeholderIcon)
                         .error(placeholderIcon)
                         .into(binding.ivIconList)
                 } else if (item.category == FileCategory.PDFS || item.name.lowercase().endsWith(".pdf")) {
-                    renderPdfThumbnail(file, binding.ivIconList, placeholderIcon)
+                    renderPdfThumbnail(previewFile, binding.ivIconList, placeholderIcon)
                 } else {
                     binding.ivIconList.scaleType = ImageView.ScaleType.FIT_CENTER
                     binding.ivIconList.setImageResource(placeholderIcon)
@@ -203,5 +210,27 @@ class FileAdapter(
     companion object {
         const val VIEW_TYPE_GRID = 1
         const val VIEW_TYPE_LIST = 2
+
+        fun findLocalVaultFile(context: android.content.Context, name: String): File? {
+            return try {
+                val dir = File(context.filesDir, "vault_files")
+                if (!dir.exists()) return null
+                val exact = File(dir, name)
+                if (exact.exists()) return exact
+                val files = dir.listFiles() ?: return null
+                files.firstOrNull { it.name.endsWith("_$name") || it.name == name }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        fun isImageOrVideo(name: String): Boolean {
+            val lower = name.lowercase()
+            return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
+                   lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp") ||
+                   lower.endsWith(".heic") || lower.endsWith(".heif") || lower.endsWith(".svg") ||
+                   lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".mov") ||
+                   lower.endsWith(".avi") || lower.endsWith(".3gp") || lower.endsWith(".webm")
+        }
     }
 }

@@ -25,6 +25,7 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
                 $COL_IS_TRASH INTEGER DEFAULT 0,
                 $COL_TIMESTAMP INTEGER NOT NULL,
                 $COL_LOCAL_URI TEXT,
+                $COL_THUMBNAIL_URI TEXT,
                 $COL_CHUNK_COUNT INTEGER DEFAULT 1
             )
             """.trimIndent()
@@ -32,8 +33,11 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_FILES")
-        onCreate(db)
+        if (oldVersion < 2) {
+            try {
+                db.execSQL("ALTER TABLE $TABLE_FILES ADD COLUMN $COL_THUMBNAIL_URI TEXT")
+            } catch (_: Exception) {}
+        }
     }
 
     fun hasFileWithTelegramId(telegramMsgId: Long): Boolean {
@@ -46,10 +50,26 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         return cursor.use { it.moveToFirst() }
     }
 
+    fun updateTelegramMessageId(oldMsgId: Long, newMsgId: Long): Int {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COL_TELEGRAM_MSG_ID, newMsgId)
+        }
+        return db.update(TABLE_FILES, values, "$COL_TELEGRAM_MSG_ID = ?", arrayOf(oldMsgId.toString()))
+    }
+
     fun updateLocalUri(fileId: Long, localUri: String): Int {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COL_LOCAL_URI, localUri)
+        }
+        return db.update(TABLE_FILES, values, "$COL_ID = ?", arrayOf(fileId.toString()))
+    }
+
+    fun updateThumbnailUri(fileId: Long, thumbUri: String): Int {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COL_THUMBNAIL_URI, thumbUri)
         }
         return db.update(TABLE_FILES, values, "$COL_ID = ?", arrayOf(fileId.toString()))
     }
@@ -62,17 +82,58 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         return db.update(TABLE_FILES, values, "$COL_TELEGRAM_MSG_ID = ?", arrayOf(telegramMsgId.toString()))
     }
 
+    fun findFileByName(name: String): FileItem? {
+        val db = readableDatabase
+        val cursor = db.query(
+            TABLE_FILES,
+            null,
+            "$COL_NAME = ? AND $COL_IS_TRASH = 0",
+            arrayOf(name),
+            null,
+            null,
+            "$COL_TIMESTAMP DESC",
+            "1"
+        )
+        val list = cursorToList(cursor)
+        return list.firstOrNull()
+    }
+
     fun insertFile(item: FileItem): Long {
         val db = writableDatabase
+        // 1. Check by telegramMessageId if already exists
         if (item.telegramMessageId > 0 && hasFileWithTelegramId(item.telegramMessageId)) {
+            val values = ContentValues()
             if (!item.localUri.isNullOrBlank()) {
-                val values = ContentValues().apply {
-                    put(COL_LOCAL_URI, item.localUri)
-                }
+                values.put(COL_LOCAL_URI, item.localUri)
+            }
+            if (!item.thumbnailUri.isNullOrBlank()) {
+                values.put(COL_THUMBNAIL_URI, item.thumbnailUri)
+            }
+            if (values.size() > 0) {
                 db.update(TABLE_FILES, values, "$COL_TELEGRAM_MSG_ID = ?", arrayOf(item.telegramMessageId.toString()))
             }
             return -1L
         }
+
+        // 2. Check if file with same name already uploaded locally (prevent duplicate row with null localUri on sync)
+        val existing = findFileByName(item.name)
+        if (existing != null) {
+            val values = ContentValues()
+            if (item.telegramMessageId > 0 && (existing.telegramMessageId == 0L || existing.telegramMessageId > 1_000_000_000L)) {
+                values.put(COL_TELEGRAM_MSG_ID, item.telegramMessageId)
+            }
+            if (!item.localUri.isNullOrBlank()) {
+                values.put(COL_LOCAL_URI, item.localUri)
+            }
+            if (!item.thumbnailUri.isNullOrBlank()) {
+                values.put(COL_THUMBNAIL_URI, item.thumbnailUri)
+            }
+            if (values.size() > 0) {
+                db.update(TABLE_FILES, values, "$COL_ID = ?", arrayOf(existing.id.toString()))
+            }
+            return existing.id
+        }
+
         val values = ContentValues().apply {
             put(COL_NAME, item.name)
             put(COL_TELEGRAM_MSG_ID, item.telegramMessageId)
@@ -83,6 +144,7 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
             put(COL_IS_TRASH, if (item.isTrash) 1 else 0)
             put(COL_TIMESTAMP, item.uploadTimestamp)
             put(COL_LOCAL_URI, item.localUri)
+            put(COL_THUMBNAIL_URI, item.thumbnailUri)
             put(COL_CHUNK_COUNT, item.chunkCount)
         }
         return db.insert(TABLE_FILES, null, values)
@@ -205,6 +267,9 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         val list = mutableListOf<FileItem>()
         cursor.use {
             while (it.moveToNext()) {
+                val thumbColIndex = it.getColumnIndex(COL_THUMBNAIL_URI)
+                val thumbUri = if (thumbColIndex != -1) it.getString(thumbColIndex) else null
+
                 val item = FileItem(
                     id = it.getLong(it.getColumnIndexOrThrow(COL_ID)),
                     name = it.getString(it.getColumnIndexOrThrow(COL_NAME)),
@@ -220,6 +285,7 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
                     isTrash = it.getInt(it.getColumnIndexOrThrow(COL_IS_TRASH)) == 1,
                     uploadTimestamp = it.getLong(it.getColumnIndexOrThrow(COL_TIMESTAMP)),
                     localUri = it.getString(it.getColumnIndexOrThrow(COL_LOCAL_URI)),
+                    thumbnailUri = thumbUri,
                     chunkCount = it.getInt(it.getColumnIndexOrThrow(COL_CHUNK_COUNT))
                 )
                 list.add(item)
@@ -322,7 +388,7 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
 
     companion object {
         private const val DATABASE_NAME = "vaultx.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         const val TABLE_FILES = "files"
         const val COL_ID = "id"
@@ -335,6 +401,7 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         const val COL_IS_TRASH = "is_trash"
         const val COL_TIMESTAMP = "timestamp"
         const val COL_LOCAL_URI = "local_uri"
+        const val COL_THUMBNAIL_URI = "thumbnail_uri"
         const val COL_CHUNK_COUNT = "chunk_count"
     }
 }

@@ -85,25 +85,30 @@ class PhotoViewerActivity : AppCompatActivity() {
     }
 
     private fun loadImage() {
-        if (!currentFileUri.isNullOrBlank()) {
-            val file = File(currentFileUri!!)
-            if (file.exists()) {
-                Glide.with(this)
-                    .load(file)
-                    .diskCacheStrategy(DiskCacheStrategy.NONE)
-                    .skipMemoryCache(true)
-                    .fitCenter()
-                    .placeholder(R.drawable.ic_photo)
-                    .error(R.drawable.ic_photo)
-                    .into(binding.ivFullscreenPhoto)
-            } else {
-                Glide.with(this)
-                    .load(currentFileUri)
-                    .fitCenter()
-                    .placeholder(R.drawable.ic_photo)
-                    .error(R.drawable.ic_photo)
-                    .into(binding.ivFullscreenPhoto)
+        var fileToLoad = currentFileUri?.let { File(it) }?.takeIf { it.exists() }
+        if (fileToLoad == null) {
+            fileToLoad = com.vaultx.app.ui.adapters.FileAdapter.findLocalVaultFile(this, currentFileName)
+            if (fileToLoad != null) {
+                currentFileUri = fileToLoad.absolutePath
             }
+        }
+
+        if (fileToLoad != null && fileToLoad.exists()) {
+            Glide.with(this)
+                .load(fileToLoad)
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(true)
+                .fitCenter()
+                .placeholder(R.drawable.ic_photo)
+                .error(R.drawable.ic_photo)
+                .into(binding.ivFullscreenPhoto)
+        } else if (!currentFileUri.isNullOrBlank()) {
+            Glide.with(this)
+                .load(currentFileUri)
+                .fitCenter()
+                .placeholder(R.drawable.ic_photo)
+                .error(R.drawable.ic_photo)
+                .into(binding.ivFullscreenPhoto)
         } else {
             binding.ivFullscreenPhoto.setImageResource(R.drawable.ic_photo)
         }

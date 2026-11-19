@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
 import java.io.File
+import java.io.FileOutputStream
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 
 /**
  * TelegramClientManager:
@@ -100,6 +103,13 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
             TdApi.UpdateAuthorizationState.CONSTRUCTOR -> {
                 val update = obj as TdApi.UpdateAuthorizationState
                 handleAuthState(update.authorizationState)
+            }
+            TdApi.UpdateMessageSendSucceeded.CONSTRUCTOR -> {
+                val update = obj as TdApi.UpdateMessageSendSucceeded
+                val oldId = update.oldMessageId
+                val newMsg = update.message
+                VaultXApplication.instance.databaseHelper.updateTelegramMessageId(oldId, newMsg.id)
+                Log.d(tag, "Message ID mapped: oldId=$oldId -> newId=${newMsg.id}")
             }
             TdApi.UpdateNewChat.CONSTRUCTOR -> {
                 val newChat = obj as TdApi.UpdateNewChat
@@ -403,20 +413,38 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
     }
 
     private fun parseMessageToFileItem(msg: TdApi.Message): FileItem? {
+        val vaultDir = File(context.filesDir, "vault_files")
         when (val content = msg.content) {
             is TdApi.MessageDocument -> {
+                val cap = content.caption?.text ?: ""
                 val rawName = content.document.fileName
-                val cap = content.caption.text
-                val name = if (rawName.isNotBlank()) {
-                    rawName
-                } else if (cap.contains("VaultX_File:")) {
+                val name = if (cap.contains("VaultX_File:")) {
                     cap.substringAfter("VaultX_File:").substringBefore("|").trim()
+                } else if (rawName.isNotBlank()) {
+                    rawName
                 } else {
                     "Document_${msg.id}"
                 }
                 val size = content.document.document.size
                 val mime = content.document.mimeType.ifBlank { "application/octet-stream" }
+                val localExisting = findVaultFile(vaultDir, name)
                 val localPath = content.document.document.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                    ?: localExisting?.absolutePath
+
+                var thumbPath: String? = null
+                val mini = content.document.minithumbnail
+                if (mini != null && mini.data.isNotEmpty()) {
+                    thumbPath = saveMiniThumbnail(msg.id, mini.data)
+                }
+                val thumb = content.document.thumbnail
+                if (thumb != null) {
+                    if (thumb.file.local.isDownloadingCompleted && thumb.file.local.path.isNotBlank() && File(thumb.file.local.path).exists()) {
+                        thumbPath = thumb.file.local.path
+                    } else {
+                        tdClient?.send(TdApi.DownloadFile(thumb.file.id, 1, 0, 0, false)) {}
+                    }
+                }
+
                 return FileItem(
                     name = name,
                     telegramMessageId = msg.id,
@@ -427,14 +455,40 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     isTrash = false,
                     uploadTimestamp = msg.date * 1000L,
                     localUri = localPath,
+                    thumbnailUri = thumbPath ?: localPath,
                     chunkCount = 1
                 )
             }
             is TdApi.MessageVideo -> {
-                val name = content.video.fileName.ifBlank { "Video_${msg.id}.mp4" }
+                val cap = content.caption?.text ?: ""
+                val rawName = content.video.fileName
+                val name = if (cap.contains("VaultX_File:")) {
+                    cap.substringAfter("VaultX_File:").substringBefore("|").trim()
+                } else if (rawName.isNotBlank()) {
+                    rawName
+                } else {
+                    "Video_${msg.id}.mp4"
+                }
                 val size = content.video.video.size
                 val mime = content.video.mimeType.ifBlank { "video/mp4" }
+                val localExisting = findVaultFile(vaultDir, name)
                 val localPath = content.video.video.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                    ?: localExisting?.absolutePath
+
+                var thumbPath: String? = null
+                val mini = content.video.minithumbnail
+                if (mini != null && mini.data.isNotEmpty()) {
+                    thumbPath = saveMiniThumbnail(msg.id, mini.data)
+                }
+                val thumb = content.video.thumbnail
+                if (thumb != null) {
+                    if (thumb.file.local.isDownloadingCompleted && thumb.file.local.path.isNotBlank() && File(thumb.file.local.path).exists()) {
+                        thumbPath = thumb.file.local.path
+                    } else {
+                        tdClient?.send(TdApi.DownloadFile(thumb.file.id, 1, 0, 0, false)) {}
+                    }
+                }
+
                 return FileItem(
                     name = name,
                     telegramMessageId = msg.id,
@@ -445,14 +499,37 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     isTrash = false,
                     uploadTimestamp = msg.date * 1000L,
                     localUri = localPath,
+                    thumbnailUri = thumbPath ?: localPath,
                     chunkCount = 1
                 )
             }
             is TdApi.MessagePhoto -> {
+                val cap = content.caption?.text ?: ""
+                val name = if (cap.contains("VaultX_File:")) {
+                    cap.substringAfter("VaultX_File:").substringBefore("|").trim()
+                } else {
+                    "Photo_${msg.id}.jpg"
+                }
                 val largest = content.photo.sizes.lastOrNull()
-                val name = "Photo_${msg.id}.jpg"
                 val size = largest?.photo?.size?.toLong() ?: 0L
+                val localExisting = findVaultFile(vaultDir, name)
                 val localPath = largest?.photo?.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                    ?: localExisting?.absolutePath
+
+                var thumbPath: String? = null
+                val mini = content.photo.minithumbnail
+                if (mini != null && mini.data.isNotEmpty()) {
+                    thumbPath = saveMiniThumbnail(msg.id, mini.data)
+                }
+                val smallest = content.photo.sizes.firstOrNull()
+                if (smallest != null) {
+                    if (smallest.photo.local.isDownloadingCompleted && smallest.photo.local.path.isNotBlank() && File(smallest.photo.local.path).exists()) {
+                        thumbPath = smallest.photo.local.path
+                    } else {
+                        tdClient?.send(TdApi.DownloadFile(smallest.photo.id, 1, 0, 0, false)) {}
+                    }
+                }
+
                 return FileItem(
                     name = name,
                     telegramMessageId = msg.id,
@@ -463,14 +540,25 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     isTrash = false,
                     uploadTimestamp = msg.date * 1000L,
                     localUri = localPath,
+                    thumbnailUri = thumbPath ?: localPath,
                     chunkCount = 1
                 )
             }
             is TdApi.MessageAudio -> {
-                val name = content.audio.fileName.ifBlank { "Audio_${msg.id}.mp3" }
+                val cap = content.caption?.text ?: ""
+                val rawName = content.audio.fileName
+                val name = if (cap.contains("VaultX_File:")) {
+                    cap.substringAfter("VaultX_File:").substringBefore("|").trim()
+                } else if (rawName.isNotBlank()) {
+                    rawName
+                } else {
+                    "Audio_${msg.id}.mp3"
+                }
                 val size = content.audio.audio.size
                 val mime = content.audio.mimeType.ifBlank { "audio/mpeg" }
+                val localExisting = findVaultFile(vaultDir, name)
                 val localPath = content.audio.audio.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                    ?: localExisting?.absolutePath
                 return FileItem(
                     name = name,
                     telegramMessageId = msg.id,
@@ -485,6 +573,25 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                 )
             }
             else -> return null
+        }
+    }
+
+    fun findVaultFile(dir: File, name: String): File? {
+        if (!dir.exists()) return null
+        val exact = File(dir, name)
+        if (exact.exists()) return exact
+        val files = dir.listFiles() ?: return null
+        return files.firstOrNull { it.name.endsWith("_$name") || it.name == name }
+    }
+
+    private fun saveMiniThumbnail(msgId: Long, data: ByteArray): String? {
+        return try {
+            val thumbFile = File(context.cacheDir, "mini_${msgId}.jpg")
+            if (thumbFile.exists() && thumbFile.length() > 0) return thumbFile.absolutePath
+            FileOutputStream(thumbFile).use { it.write(data) }
+            thumbFile.absolutePath
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -594,7 +701,11 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         val inputFile = TdApi.InputFileLocal(filePath)
         val caption = ChunkedUploader.generateChunkCaption(fileName, 0, 1, sizeBytes)
         val formattedText = TdApi.FormattedText(caption, null)
-        val inputMessageContent = TdApi.InputMessageDocument(inputFile, null, false, formattedText)
+        val category = determineCategory(fileName, mimeType)
+        val inputThumbnail = if (category == FileCategory.PHOTOS) {
+            createInputThumbnail(filePath)
+        } else null
+        val inputMessageContent = TdApi.InputMessageDocument(inputFile, inputThumbnail, false, formattedText)
 
         tdClient?.send(
             TdApi.SendMessage(
@@ -613,16 +724,45 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                         telegramMessageId = result.id,
                         sizeBytes = sizeBytes,
                         mimeType = mimeType,
-                        category = determineCategory(fileName, mimeType),
+                        category = category,
                         isFavorite = false,
                         uploadTimestamp = System.currentTimeMillis(),
-                        localUri = filePath
+                        localUri = filePath,
+                        thumbnailUri = filePath
                     )
                     onSuccess?.invoke(fileItem)
                 } else if (result is TdApi.Error) {
                     onError?.invoke(result.message)
                 }
             }
+        }
+    }
+
+    private fun createInputThumbnail(imagePath: String): TdApi.InputThumbnail? {
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(imagePath, options)
+            val origW = options.outWidth
+            val origH = options.outHeight
+            if (origW <= 0 || origH <= 0) return null
+
+            val maxDim = 320
+            var sample = 1
+            while ((origW / sample) > maxDim || (origH / sample) > maxDim) {
+                sample *= 2
+            }
+            val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val bmp = BitmapFactory.decodeFile(imagePath, decodeOpts) ?: return null
+            val thumbFile = File(context.cacheDir, "up_thumb_${System.currentTimeMillis()}.jpg")
+            FileOutputStream(thumbFile).use { out ->
+                bmp.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            }
+            val targetW = bmp.width
+            val targetH = bmp.height
+            bmp.recycle()
+            TdApi.InputThumbnail(TdApi.InputFileLocal(thumbFile.absolutePath), targetW, targetH)
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -655,13 +795,13 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         )
     }
 
-    private fun determineCategory(name: String, mimeType: String): FileCategory {
+    fun determineCategory(name: String, mimeType: String): FileCategory {
         val lower = name.lowercase()
         return when {
-            mimeType.startsWith("image") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") -> FileCategory.PHOTOS
-            mimeType.startsWith("video") || lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".mov") || lower.endsWith(".avi") -> FileCategory.VIDEOS
+            mimeType.startsWith("image") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".heic") || lower.endsWith(".heif") || lower.endsWith(".svg") -> FileCategory.PHOTOS
+            mimeType.startsWith("video") || lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".mov") || lower.endsWith(".avi") || lower.endsWith(".3gp") || lower.endsWith(".webm") -> FileCategory.VIDEOS
             mimeType == "application/pdf" || lower.endsWith(".pdf") -> FileCategory.PDFS
-            mimeType.startsWith("audio") || lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".wav") || lower.endsWith(".aac") -> FileCategory.AUDIO
+            mimeType.startsWith("audio") || lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".wav") || lower.endsWith(".aac") || lower.endsWith(".ogg") || lower.endsWith(".flac") -> FileCategory.AUDIO
             lower.endsWith(".doc") || lower.endsWith(".docx") || lower.endsWith(".xls") || lower.endsWith(".xlsx") || lower.endsWith(".ppt") || lower.endsWith(".pptx") || lower.endsWith(".txt") -> FileCategory.DOCS
             else -> FileCategory.DOCS
         }

@@ -49,19 +49,23 @@ class RecentFilesAdapter(
                 FileCategory.ALL -> R.drawable.ic_folder
             }
 
-            val isLocal = !item.localUri.isNullOrBlank() && File(item.localUri!!).exists()
-            if (isLocal) {
-                val file = File(item.localUri!!)
-                if (item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) {
+            val isPhotoOrVideo = item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS || FileAdapter.isImageOrVideo(item.name)
+
+            val previewFile = item.localUri?.let { File(it) }?.takeIf { it.exists() }
+                ?: item.thumbnailUri?.let { File(it) }?.takeIf { it.exists() }
+                ?: FileAdapter.findLocalVaultFile(itemView.context, item.name)
+
+            if (previewFile != null) {
+                if (isPhotoOrVideo) {
                     binding.ivRecentIcon.scaleType = ImageView.ScaleType.CENTER_CROP
                     Glide.with(itemView.context)
-                        .load(file)
+                        .load(previewFile)
                         .centerCrop()
                         .placeholder(placeholderIcon)
                         .error(placeholderIcon)
                         .into(binding.ivRecentIcon)
                 } else if (item.category == FileCategory.PDFS || item.name.lowercase().endsWith(".pdf")) {
-                    renderPdfThumbnail(file, binding.ivRecentIcon, placeholderIcon)
+                    renderPdfThumbnail(previewFile, binding.ivRecentIcon, placeholderIcon)
                 } else {
                     binding.ivRecentIcon.scaleType = ImageView.ScaleType.FIT_CENTER
                     binding.ivRecentIcon.setImageResource(placeholderIcon)

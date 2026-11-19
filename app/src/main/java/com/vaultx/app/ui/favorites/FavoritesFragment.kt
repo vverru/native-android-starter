@@ -85,10 +85,13 @@ class FavoritesFragment : Fragment() {
     }
 
     private fun openFile(file: FileItem) {
-        val isLocalAvailable = !file.localUri.isNullOrBlank() && java.io.File(file.localUri!!).exists()
-        if (isLocalAvailable) {
+        val local = file.localUri?.let { java.io.File(it) }?.takeIf { it.exists() }
+            ?: com.vaultx.app.ui.adapters.FileAdapter.findLocalVaultFile(requireContext(), file.name)
+        if (local != null) {
+            file.localUri = local.absolutePath
             launchViewerForFile(file)
-        } else {
+            return
+        }
             val progressDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext(), com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
                 .setTitle("Downloading from Cloud")
                 .setMessage("Fetching ${file.name} for viewing…")

@@ -169,7 +169,10 @@ class MainActivity : AppCompatActivity() {
 
         // Save to PERMANENT local storage so file preview and opening works instantly!
         val vaultDir = File(filesDir, "vault_files").apply { mkdirs() }
-        val localDest = File(vaultDir, "${System.currentTimeMillis()}_$safeFileName")
+        var localDest = File(vaultDir, safeFileName)
+        if (localDest.exists() && localDest.length() != fileSize) {
+            localDest = File(vaultDir, "${System.currentTimeMillis()}_$safeFileName")
+        }
         try {
             contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(localDest).use { output ->
@@ -182,6 +185,22 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // IMMEDIATELY insert into SQLite and refresh UI so the image preview appears RIGHT NOW!
+        val category = VaultXApplication.instance.telegramClient.determineCategory(safeFileName, mimeType)
+        val initialItem = FileItem(
+            name = safeFileName,
+            telegramMessageId = 0L,
+            sizeBytes = fileSize,
+            mimeType = mimeType,
+            category = category,
+            isFavorite = false,
+            uploadTimestamp = System.currentTimeMillis(),
+            localUri = localDest.absolutePath,
+            thumbnailUri = localDest.absolutePath
+        )
+        VaultXApplication.instance.databaseHelper.insertFile(initialItem)
+        filesFragment.loadData()
+
         startRealTelegramUpload(localDest.absolutePath, safeFileName, fileSize, mimeType)
     }
 
@@ -191,10 +210,15 @@ class MainActivity : AppCompatActivity() {
             mimeType.startsWith("image/jpeg") || mimeType.startsWith("image/jpg") -> "$fileName.jpg"
             mimeType.startsWith("image/png") -> "$fileName.png"
             mimeType.startsWith("image/webp") -> "$fileName.webp"
+            mimeType.startsWith("image/gif") -> "$fileName.gif"
+            mimeType.startsWith("image/bmp") -> "$fileName.bmp"
+            mimeType.startsWith("image/") -> "$fileName.jpg"
             mimeType.startsWith("video/mp4") -> "$fileName.mp4"
             mimeType.startsWith("video/mkv") -> "$fileName.mkv"
+            mimeType.startsWith("video/") -> "$fileName.mp4"
             mimeType == "application/pdf" -> "$fileName.pdf"
             mimeType.startsWith("audio/mpeg") || mimeType.startsWith("audio/mp3") -> "$fileName.mp3"
+            mimeType.startsWith("audio/") -> "$fileName.mp3"
             else -> fileName
         }
     }
@@ -227,17 +251,15 @@ class MainActivity : AppCompatActivity() {
             },
             onSuccess = { fileItem ->
                 binding.cardActiveUpload.visibility = View.GONE
-                val itemWithUri = fileItem.copy(localUri = localPath)
+                val itemWithUri = fileItem.copy(localUri = localPath, thumbnailUri = localPath)
                 VaultXApplication.instance.databaseHelper.insertFile(itemWithUri)
                 Toast.makeText(this, "Uploaded to private Telegram channel: $fileName", Toast.LENGTH_LONG).show()
                 filesFragment.loadData()
             },
             onError = { errMsg ->
                 binding.cardActiveUpload.visibility = View.GONE
-                val fallbackItem = VaultXApplication.instance.telegramClient.prepareFileUpload(fileName, fileSize, mimeType).copy(localUri = localPath)
-                VaultXApplication.instance.databaseHelper.insertFile(fallbackItem)
-                filesFragment.loadData()
                 Toast.makeText(this, "Saved to Vault: $fileName", Toast.LENGTH_LONG).show()
+                filesFragment.loadData()
             }
         )
     }
