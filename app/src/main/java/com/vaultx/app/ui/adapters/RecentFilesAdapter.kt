@@ -1,7 +1,11 @@
 package com.vaultx.app.ui.adapters
 
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.vaultx.app.R
@@ -45,29 +49,54 @@ class RecentFilesAdapter(
                 FileCategory.ALL -> R.drawable.ic_folder
             }
 
-            if ((item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) && item.localUri != null) {
-                val file = File(item.localUri)
-                if (file.exists()) {
+            val isLocal = !item.localUri.isNullOrBlank() && File(item.localUri!!).exists()
+            if (isLocal) {
+                val file = File(item.localUri!!)
+                if (item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS) {
+                    binding.ivRecentIcon.scaleType = ImageView.ScaleType.CENTER_CROP
                     Glide.with(itemView.context)
                         .load(file)
                         .centerCrop()
                         .placeholder(placeholderIcon)
                         .error(placeholderIcon)
                         .into(binding.ivRecentIcon)
+                } else if (item.category == FileCategory.PDFS || item.name.lowercase().endsWith(".pdf")) {
+                    renderPdfThumbnail(file, binding.ivRecentIcon, placeholderIcon)
                 } else {
-                    Glide.with(itemView.context)
-                        .load(item.localUri)
-                        .centerCrop()
-                        .placeholder(placeholderIcon)
-                        .error(placeholderIcon)
-                        .into(binding.ivRecentIcon)
+                    binding.ivRecentIcon.scaleType = ImageView.ScaleType.FIT_CENTER
+                    binding.ivRecentIcon.setImageResource(placeholderIcon)
                 }
             } else {
-                binding.ivRecentIcon.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                binding.ivRecentIcon.scaleType = ImageView.ScaleType.FIT_CENTER
                 binding.ivRecentIcon.setImageResource(placeholderIcon)
             }
 
             binding.root.setOnClickListener { onItemClick(item) }
+        }
+
+        private fun renderPdfThumbnail(file: File, imageView: ImageView, fallbackRes: Int) {
+            try {
+                val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                val renderer = PdfRenderer(pfd)
+                if (renderer.pageCount > 0) {
+                    val page = renderer.openPage(0)
+                    val width = (page.width / 2).coerceAtLeast(80)
+                    val height = (page.height / 2).coerceAtLeast(80)
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.close()
+                    renderer.close()
+                    pfd.close()
+                    imageView.scaleType = ImageView.ScaleType.CENTER_CROP
+                    imageView.setImageBitmap(bitmap)
+                } else {
+                    renderer.close()
+                    pfd.close()
+                    imageView.setImageResource(fallbackRes)
+                }
+            } catch (_: Exception) {
+                imageView.setImageResource(fallbackRes)
+            }
         }
     }
 }

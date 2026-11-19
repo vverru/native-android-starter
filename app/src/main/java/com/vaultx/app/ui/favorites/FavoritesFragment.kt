@@ -85,6 +85,31 @@ class FavoritesFragment : Fragment() {
     }
 
     private fun openFile(file: FileItem) {
+        val isLocalAvailable = !file.localUri.isNullOrBlank() && java.io.File(file.localUri!!).exists()
+        if (isLocalAvailable) {
+            launchViewerForFile(file)
+        } else {
+            val progressDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext(), com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
+                .setTitle("Downloading from Cloud")
+                .setMessage("Fetching ${file.name} for viewing…")
+                .setCancelable(false)
+                .create()
+            progressDialog.show()
+
+            VaultXApplication.instance.telegramClient.downloadFileFromTelegram(file) { downloadedFile ->
+                progressDialog.dismiss()
+                if (downloadedFile != null && downloadedFile.exists()) {
+                    file.localUri = downloadedFile.absolutePath
+                    loadFavorites()
+                    launchViewerForFile(file)
+                } else {
+                    Toast.makeText(requireContext(), "Could not download file from Telegram", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun launchViewerForFile(file: FileItem) {
         when (file.category) {
             FileCategory.PHOTOS -> {
                 val intent = Intent(requireContext(), PhotoViewerActivity::class.java).apply {
@@ -121,9 +146,32 @@ class FavoritesFragment : Fragment() {
                     }
                     startActivity(intent)
                 } else {
-                    Toast.makeText(requireContext(), "${getString(R.string.action_open_with)} ${file.name}", Toast.LENGTH_SHORT).show()
+                    openExternalDocument(file)
                 }
             }
+        }
+    }
+
+    private fun openExternalDocument(file: FileItem) {
+        val uriStr = file.localUri ?: return
+        val localFile = java.io.File(uriStr)
+        if (!localFile.exists()) {
+            Toast.makeText(requireContext(), "File not found locally", Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            val contentUri = androidx.core.content.FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                localFile
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(contentUri, file.mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(intent, "Open with"))
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "No app found to open ${file.name}", Toast.LENGTH_SHORT).show()
         }
     }
 

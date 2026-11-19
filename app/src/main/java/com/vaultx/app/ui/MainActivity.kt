@@ -165,9 +165,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+        val safeFileName = ensureValidExtension(fileName, mimeType)
 
-        // Cache file locally to provide absolute path to TDLib MTProto engine
-        val localDest = File(cacheDir, fileName)
+        // Save to PERMANENT local storage so file preview and opening works instantly!
+        val vaultDir = File(filesDir, "vault_files").apply { mkdirs() }
+        val localDest = File(vaultDir, "${System.currentTimeMillis()}_$safeFileName")
         try {
             contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(localDest).use { output ->
@@ -176,11 +178,25 @@ class MainActivity : AppCompatActivity() {
             }
             if (fileSize == 0L) fileSize = localDest.length()
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to read file for Telegram upload: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Failed to read file: ${e.message}", Toast.LENGTH_SHORT).show()
             return
         }
 
-        startRealTelegramUpload(localDest.absolutePath, fileName, fileSize, mimeType)
+        startRealTelegramUpload(localDest.absolutePath, safeFileName, fileSize, mimeType)
+    }
+
+    private fun ensureValidExtension(fileName: String, mimeType: String): String {
+        if (fileName.contains(".")) return fileName
+        return when {
+            mimeType.startsWith("image/jpeg") || mimeType.startsWith("image/jpg") -> "$fileName.jpg"
+            mimeType.startsWith("image/png") -> "$fileName.png"
+            mimeType.startsWith("image/webp") -> "$fileName.webp"
+            mimeType.startsWith("video/mp4") -> "$fileName.mp4"
+            mimeType.startsWith("video/mkv") -> "$fileName.mkv"
+            mimeType == "application/pdf" -> "$fileName.pdf"
+            mimeType.startsWith("audio/mpeg") || mimeType.startsWith("audio/mp3") -> "$fileName.mp3"
+            else -> fileName
+        }
     }
 
     private fun startRealTelegramUpload(localPath: String, fileName: String, fileSize: Long, mimeType: String) {

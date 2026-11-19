@@ -46,11 +46,33 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         return cursor.use { it.moveToFirst() }
     }
 
+    fun updateLocalUri(fileId: Long, localUri: String): Int {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COL_LOCAL_URI, localUri)
+        }
+        return db.update(TABLE_FILES, values, "$COL_ID = ?", arrayOf(fileId.toString()))
+    }
+
+    fun updateLocalUriByTelegramMsgId(telegramMsgId: Long, localUri: String): Int {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COL_LOCAL_URI, localUri)
+        }
+        return db.update(TABLE_FILES, values, "$COL_TELEGRAM_MSG_ID = ?", arrayOf(telegramMsgId.toString()))
+    }
+
     fun insertFile(item: FileItem): Long {
+        val db = writableDatabase
         if (item.telegramMessageId > 0 && hasFileWithTelegramId(item.telegramMessageId)) {
+            if (!item.localUri.isNullOrBlank()) {
+                val values = ContentValues().apply {
+                    put(COL_LOCAL_URI, item.localUri)
+                }
+                db.update(TABLE_FILES, values, "$COL_TELEGRAM_MSG_ID = ?", arrayOf(item.telegramMessageId.toString()))
+            }
             return -1L
         }
-        val db = writableDatabase
         val values = ContentValues().apply {
             put(COL_NAME, item.name)
             put(COL_TELEGRAM_MSG_ID, item.telegramMessageId)

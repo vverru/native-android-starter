@@ -127,6 +127,10 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     syncChannelFiles(chat.id)
                 }
             }
+            TdApi.UpdateFile.CONSTRUCTOR -> {
+                val updateFile = obj as TdApi.UpdateFile
+                handleFileUpdate(updateFile.file)
+            }
             TdApi.Error.CONSTRUCTOR -> {
                 val error = obj as TdApi.Error
                 Log.e(tag, "TDLib Server Error [${error.code}]: ${error.message}")
@@ -484,6 +488,85 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         }
     }
 
+    private val activeDownloads = mutableMapOf<Int, (File?) -> Unit>()
+
+    private fun handleFileUpdate(file: TdApi.File) {
+        if (file.local.isDownloadingCompleted && file.local.path.isNotBlank()) {
+            val localFile = File(file.local.path)
+            if (localFile.exists()) {
+                val callback = synchronized(activeDownloads) {
+                    activeDownloads.remove(file.id)
+                }
+                mainHandler.post {
+                    callback?.invoke(localFile)
+                }
+            }
+        }
+    }
+
+    /**
+     * Downloads a file from Telegram servers on demand for viewing.
+     */
+    fun downloadFileFromTelegram(
+        item: FileItem,
+        onComplete: (File?) -> Unit
+    ) {
+        if (!item.localUri.isNullOrBlank()) {
+            val local = File(item.localUri!!)
+            if (local.exists()) {
+                onComplete(local)
+                return
+            }
+        }
+
+        val targetChatId = privateChannelId
+        if (targetChatId == 0L || item.telegramMessageId == 0L) {
+            onComplete(null)
+            return
+        }
+
+        tdClient?.send(TdApi.GetMessage(targetChatId, item.telegramMessageId)) { result ->
+            if (result is TdApi.Message) {
+                val tdlibFile = extractFileFromMessage(result)
+                if (tdlibFile != null) {
+                    if (tdlibFile.local.isDownloadingCompleted && tdlibFile.local.path.isNotBlank()) {
+                        val downloaded = File(tdlibFile.local.path)
+                        if (downloaded.exists()) {
+                            VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, downloaded.absolutePath)
+                            mainHandler.post { onComplete(downloaded) }
+                            return@send
+                        }
+                    }
+
+                    synchronized(activeDownloads) {
+                        activeDownloads[tdlibFile.id] = { completedFile ->
+                            if (completedFile != null) {
+                                VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, completedFile.absolutePath)
+                            }
+                            onComplete(completedFile)
+                        }
+                    }
+
+                    tdClient?.send(TdApi.DownloadFile(tdlibFile.id, 32, 0, 0, false)) { _ -> }
+                } else {
+                    mainHandler.post { onComplete(null) }
+                }
+            } else {
+                mainHandler.post { onComplete(null) }
+            }
+        }
+    }
+
+    private fun extractFileFromMessage(msg: TdApi.Message): TdApi.File? {
+        return when (val content = msg.content) {
+            is TdApi.MessageDocument -> content.document.document
+            is TdApi.MessageVideo -> content.video.video
+            is TdApi.MessagePhoto -> content.photo.sizes.lastOrNull()?.photo
+            is TdApi.MessageAudio -> content.audio.audio
+            else -> null
+        }
+    }
+
     /**
      * Real upload of file directly to the user's private Telegram channel.
      */
@@ -496,7 +579,18 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         onSuccess: ((FileItem) -> Unit)? = null,
         onError: ((String) -> Unit)? = null
     ) {
-        val targetChatId = if (privateChannelId != 0L) privateChannelId else -1001234567890L
+        if (privateChannelId == 0L) {
+            setupVaultStorageChannel { readyChannelId ->
+                if (readyChannelId != 0L) {
+                    uploadFileToTelegram(filePath, fileName, sizeBytes, mimeType, onProgress, onSuccess, onError)
+                } else {
+                    onError?.invoke("Storage channel not ready")
+                }
+            }
+            return
+        }
+
+        val targetChatId = privateChannelId
         val inputFile = TdApi.InputFileLocal(filePath)
         val caption = ChunkedUploader.generateChunkCaption(fileName, 0, 1, sizeBytes)
         val formattedText = TdApi.FormattedText(caption, null)
