@@ -60,10 +60,10 @@ class FilesFragment : Fragment() {
             isGridMode = isGrid,
             onItemClick = { file -> openFile(file) },
             onFavoriteToggle = { file ->
-                val newFav = !file.isFavorite
-                VaultXApplication.instance.databaseHelper.setFavorite(file.id, newFav)
-                loadData()
-                val msg = if (newFav) getString(R.string.action_favorite) else getString(R.string.action_unfavorite)
+                Thread {
+                    VaultXApplication.instance.databaseHelper.setFavorite(file.id, file.isFavorite)
+                }.start()
+                val msg = if (file.isFavorite) getString(R.string.action_favorite) else getString(R.string.action_unfavorite)
                 Toast.makeText(requireContext(), "${file.name} $msg", Toast.LENGTH_SHORT).show()
             }
         )
@@ -205,9 +205,19 @@ class FilesFragment : Fragment() {
         }
     }
 
+    private val syncListener = {
+        loadData()
+    }
+
     override fun onResume() {
         super.onResume()
         loadData()
+        VaultXApplication.instance.telegramClient.addSyncListener(syncListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        VaultXApplication.instance.telegramClient.removeSyncListener(syncListener)
     }
 
     override fun onDestroyView() {

@@ -24,6 +24,17 @@ class FileAdapter(
         notifyDataSetChanged()
     }
 
+    fun getFiles(): List<FileItem> = files
+
+    fun removeFileAt(position: Int) {
+        if (position in files.indices) {
+            val mutable = files.toMutableList()
+            mutable.removeAt(position)
+            files = mutable
+            notifyItemRemoved(position)
+        }
+    }
+
     override fun getItemViewType(position: Int): Int {
         return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
     }
@@ -86,7 +97,18 @@ class FileAdapter(
             binding.ivFavorite.setImageResource(starRes)
 
             binding.root.setOnClickListener { onItemClick(item) }
-            binding.ivFavorite.setOnClickListener { onFavoriteToggle(item) }
+
+            // Instant 0ms optimistic favorite toggle with tactile pop animation
+            binding.ivFavorite.setOnClickListener {
+                item.isFavorite = !item.isFavorite
+                binding.ivFavorite.setImageResource(
+                    if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+                )
+                binding.ivFavorite.animate().scaleX(1.35f).scaleY(1.35f).setDuration(80).withEndAction {
+                    binding.ivFavorite.animate().scaleX(1.0f).scaleY(1.0f).setDuration(80).start()
+                }.start()
+                onFavoriteToggle(item)
+            }
         }
     }
 
@@ -123,7 +145,18 @@ class FileAdapter(
             binding.ivFavoriteList.setImageResource(starRes)
 
             binding.root.setOnClickListener { onItemClick(item) }
-            binding.ivFavoriteList.setOnClickListener { onFavoriteToggle(item) }
+
+            // Instant 0ms optimistic favorite toggle with tactile pop animation
+            binding.ivFavoriteList.setOnClickListener {
+                item.isFavorite = !item.isFavorite
+                binding.ivFavoriteList.setImageResource(
+                    if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+                )
+                binding.ivFavoriteList.animate().scaleX(1.35f).scaleY(1.35f).setDuration(80).withEndAction {
+                    binding.ivFavoriteList.animate().scaleX(1.0f).scaleY(1.0f).setDuration(80).start()
+                }.start()
+                onFavoriteToggle(item)
+            }
         }
     }
 

@@ -36,7 +36,20 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         onCreate(db)
     }
 
+    fun hasFileWithTelegramId(telegramMsgId: Long): Boolean {
+        if (telegramMsgId <= 0L) return false
+        val db = readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT 1 FROM $TABLE_FILES WHERE $COL_TELEGRAM_MSG_ID = ? LIMIT 1",
+            arrayOf(telegramMsgId.toString())
+        )
+        return cursor.use { it.moveToFirst() }
+    }
+
     fun insertFile(item: FileItem): Long {
+        if (item.telegramMessageId > 0 && hasFileWithTelegramId(item.telegramMessageId)) {
+            return -1L
+        }
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COL_NAME, item.name)

@@ -60,9 +60,19 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private val syncListener = {
+        refreshStorageUsage()
+    }
+
     override fun onResume() {
         super.onResume()
         refreshStorageUsage()
+        VaultXApplication.instance.telegramClient.addSyncListener(syncListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        VaultXApplication.instance.telegramClient.removeSyncListener(syncListener)
     }
 
     private fun refreshStorageUsage() {

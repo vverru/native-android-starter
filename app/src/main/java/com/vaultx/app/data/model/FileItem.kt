@@ -7,10 +7,10 @@ data class FileItem(
     val sizeBytes: Long,
     val mimeType: String,
     val category: FileCategory,
-    val isFavorite: Boolean = false,
-    val isTrash: Boolean = false,
+    var isFavorite: Boolean = false,
+    var isTrash: Boolean = false,
     val uploadTimestamp: Long = System.currentTimeMillis(),
-    val localUri: String? = null,
+    var localUri: String? = null,
     val chunkCount: Int = 1
 ) {
     val formattedSize: String

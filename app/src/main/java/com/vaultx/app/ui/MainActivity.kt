@@ -61,6 +61,9 @@ class MainActivity : AppCompatActivity() {
         setupBottomNavigation()
         setupUploadFab()
         setupUploadCardListeners()
+
+        // Discover and sync all Telegram files into SQLite
+        VaultXApplication.instance.telegramClient.ensureVaultChannelAndSync()
     }
 
     private fun setupFragments() {

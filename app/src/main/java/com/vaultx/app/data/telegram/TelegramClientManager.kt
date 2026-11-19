@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.vaultx.app.VaultXApplication
 import com.vaultx.app.data.model.FileCategory
 import com.vaultx.app.data.model.FileItem
 import com.vaultx.app.data.security.SecurityVault
@@ -32,6 +33,10 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
     private val _authState = MutableStateFlow(TelegramAuthState.WAIT_PHONE)
     val authState: StateFlow<TelegramAuthState> = _authState
 
+    private val prefs by lazy {
+        context.getSharedPreferences("vaultx_telegram_channel", Context.MODE_PRIVATE)
+    }
+
     var phoneNumber: String = ""
         private set
 
@@ -41,7 +46,14 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
     var privateChannelTitle: String = "VaultX Private Storage"
         private set
 
+    private var isSettingUpChannel = false
+    private val syncListeners = mutableListOf<() -> Unit>()
+
     init {
+        // Restore cached channel if previously found
+        privateChannelId = prefs.getLong("channel_id", 0L)
+        privateChannelTitle = prefs.getString("channel_title", "VaultX Private Storage") ?: "VaultX Private Storage"
+
         // Initialize TDLib native client
         try {
             // Set TDLib logging level (1 = fatal errors only to keep logs clean and secure)
@@ -51,6 +63,34 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         } catch (e: Throwable) {
             Log.e(tag, "Failed to initialize TDLib client", e)
         }
+    }
+
+    fun addSyncListener(listener: () -> Unit) {
+        synchronized(syncListeners) {
+            if (!syncListeners.contains(listener)) syncListeners.add(listener)
+        }
+    }
+
+    fun removeSyncListener(listener: () -> Unit) {
+        synchronized(syncListeners) {
+            syncListeners.remove(listener)
+        }
+    }
+
+    private fun notifySyncListeners() {
+        mainHandler.post {
+            synchronized(syncListeners) {
+                syncListeners.forEach {
+                    try { it.invoke() } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    private fun saveChannelPreference(channelId: Long, title: String) {
+        privateChannelId = channelId
+        privateChannelTitle = title
+        prefs.edit().putLong("channel_id", channelId).putString("channel_title", title).apply()
     }
 
     override fun onResult(obj: TdApi.Object?) {
@@ -64,9 +104,11 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
             TdApi.UpdateNewChat.CONSTRUCTOR -> {
                 val newChat = obj as TdApi.UpdateNewChat
                 if (newChat.chat.title.contains("VaultX", ignoreCase = true)) {
-                    privateChannelId = newChat.chat.id
-                    privateChannelTitle = newChat.chat.title
-                    Log.d(tag, "Found existing VaultX private storage channel ID: $privateChannelId")
+                    if (privateChannelId == 0L) {
+                        saveChannelPreference(newChat.chat.id, newChat.chat.title)
+                        Log.d(tag, "Found existing VaultX private storage channel ID: $privateChannelId")
+                    }
+                    syncChannelFiles(newChat.chat.id)
                 }
             }
             TdApi.Chats.CONSTRUCTOR -> {
@@ -78,9 +120,11 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
             TdApi.Chat.CONSTRUCTOR -> {
                 val chat = obj as TdApi.Chat
                 if (chat.title.contains("VaultX", ignoreCase = true)) {
-                    privateChannelId = chat.id
-                    privateChannelTitle = chat.title
-                    Log.d(tag, "Resolved VaultX private storage channel: ${chat.title} ($privateChannelId)")
+                    if (privateChannelId == 0L) {
+                        saveChannelPreference(chat.id, chat.title)
+                        Log.d(tag, "Resolved VaultX private storage channel: ${chat.title} ($privateChannelId)")
+                    }
+                    syncChannelFiles(chat.id)
                 }
             }
             TdApi.Error.CONSTRUCTOR -> {
@@ -203,35 +247,95 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
     }
 
     /**
-     * Finds or creates a dedicated, private Telegram channel owned by the user.
+     * Ensures the private storage channel is discovered or created, and automatically
+     * synchronizes all files from Telegram cloud into local SQLite.
      */
-    fun setupVaultStorageChannel() {
-        // Query user's existing chats to see if VaultX storage channel already exists
-        tdClient?.send(TdApi.GetChats(null, 100)) { result ->
-            if (result is TdApi.Chats) {
-                var found = false
-                for (id in result.chatIds) {
-                    tdClient?.send(TdApi.GetChat(id)) { chatResult ->
-                        if (chatResult is TdApi.Chat && chatResult.title.contains("VaultX", ignoreCase = true)) {
-                            privateChannelId = chatResult.id
-                            privateChannelTitle = chatResult.title
-                            found = true
-                        }
-                    }
-                }
-                // If no VaultX channel exists, automatically create a brand new private supergroup channel!
-                mainHandler.postDelayed({
-                    if (!found && privateChannelId == 0L) {
-                        createPrivateStorageChannel()
-                    }
-                }, 2000)
-            } else {
-                createPrivateStorageChannel()
+    fun ensureVaultChannelAndSync(onFinished: (() -> Unit)? = null) {
+        if (privateChannelId != 0L) {
+            syncChannelFiles(privateChannelId, 0L, onFinished)
+        } else {
+            setupVaultStorageChannel {
+                syncChannelFiles(it, 0L, onFinished)
             }
         }
     }
 
-    private fun createPrivateStorageChannel() {
+    /**
+     * Finds or creates a dedicated, private Telegram channel owned by the user.
+     * Prevents creating duplicate channels on app reinstallation!
+     */
+    fun setupVaultStorageChannel(onReady: ((Long) -> Unit)? = null) {
+        if (privateChannelId != 0L) {
+            syncChannelFiles(privateChannelId)
+            onReady?.invoke(privateChannelId)
+            return
+        }
+
+        if (isSettingUpChannel) return
+        isSettingUpChannel = true
+
+        // 1. Search directly on Telegram server for chats with "VaultX" in title
+        tdClient?.send(TdApi.SearchChatsOnServer("VaultX", 50)) { searchResult ->
+            if (searchResult is TdApi.Chats && searchResult.chatIds.isNotEmpty()) {
+                inspectCandidateChats(searchResult.chatIds.toList(), onReady)
+            } else {
+                // Preload chat list and inspect
+                tdClient?.send(TdApi.LoadChats(null, 100)) { _ ->
+                    tdClient?.send(TdApi.GetChats(null, 100)) { getResult ->
+                        if (getResult is TdApi.Chats && getResult.chatIds.isNotEmpty()) {
+                            inspectCandidateChats(getResult.chatIds.toList(), onReady)
+                        } else {
+                            // Truly no channel exists yet -> create a new one
+                            createPrivateStorageChannel(onReady)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun inspectCandidateChats(chatIds: List<Long>, onReady: ((Long) -> Unit)?) {
+        val matchingChats = mutableListOf<TdApi.Chat>()
+        var remaining = chatIds.size
+        if (remaining == 0) {
+            createPrivateStorageChannel(onReady)
+            return
+        }
+
+        for (id in chatIds) {
+            tdClient?.send(TdApi.GetChat(id)) { chatResult ->
+                synchronized(matchingChats) {
+                    if (chatResult is TdApi.Chat && chatResult.title.contains("VaultX", ignoreCase = true)) {
+                        matchingChats.add(chatResult)
+                    }
+                    remaining--
+                    if (remaining == 0) {
+                        mainHandler.post {
+                            isSettingUpChannel = false
+                            if (matchingChats.isNotEmpty()) {
+                                // Select existing channel
+                                val selectedChat = matchingChats.first()
+                                saveChannelPreference(selectedChat.id, selectedChat.title)
+                                Log.d(tag, "Discovered existing VaultX storage channel: ${selectedChat.title} (ID: ${selectedChat.id})")
+
+                                // Sync all files from every VaultX channel found so no files are ever lost!
+                                for (chat in matchingChats) {
+                                    syncChannelFiles(chat.id)
+                                }
+                                onReady?.invoke(selectedChat.id)
+                            } else if (privateChannelId == 0L) {
+                                createPrivateStorageChannel(onReady)
+                            } else {
+                                onReady?.invoke(privateChannelId)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun createPrivateStorageChannel(onReady: ((Long) -> Unit)? = null) {
         tdClient?.send(
             TdApi.CreateNewSupergroupChat(
                 "VaultX Private Storage",
@@ -243,11 +347,140 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                 false
             )
         ) { result ->
-            if (result is TdApi.Chat) {
-                privateChannelId = result.id
-                privateChannelTitle = result.title
-                Log.d(tag, "Created brand new private VaultX channel ID: $privateChannelId")
+            mainHandler.post {
+                isSettingUpChannel = false
+                if (result is TdApi.Chat) {
+                    saveChannelPreference(result.id, result.title)
+                    Log.d(tag, "Created brand new private VaultX channel ID: $privateChannelId")
+                    onReady?.invoke(result.id)
+                } else if (result is TdApi.Error) {
+                    Log.e(tag, "Failed to create storage channel: ${result.message}")
+                }
             }
+        }
+    }
+
+    /**
+     * Reads all historical uploaded files from the Telegram private channel
+     * and restores them into local SQLite database (reinstallation recovery).
+     */
+    fun syncChannelFiles(channelId: Long, fromMessageId: Long = 0L, onFinished: (() -> Unit)? = null) {
+        tdClient?.send(TdApi.GetChatHistory(channelId, fromMessageId, 0, 100, false)) { result ->
+            if (result is TdApi.Messages) {
+                val db = VaultXApplication.instance.databaseHelper
+                var restoredInThisBatch = 0
+                for (msg in result.messages) {
+                    val item = parseMessageToFileItem(msg)
+                    if (item != null) {
+                        if (!db.hasFileWithTelegramId(item.telegramMessageId)) {
+                            db.insertFile(item)
+                            restoredInThisBatch++
+                        }
+                    }
+                }
+
+                if (restoredInThisBatch > 0) {
+                    Log.d(tag, "Restored $restoredInThisBatch files from Telegram channel $channelId (batch)")
+                    notifySyncListeners()
+                }
+
+                // If 100 messages returned, paginate backwards to retrieve all historical files!
+                if (result.messages.size >= 100) {
+                    val nextFromId = result.messages.last().id
+                    syncChannelFiles(channelId, nextFromId, onFinished)
+                } else {
+                    notifySyncListeners()
+                    mainHandler.post { onFinished?.invoke() }
+                }
+            } else {
+                mainHandler.post { onFinished?.invoke() }
+            }
+        }
+    }
+
+    private fun parseMessageToFileItem(msg: TdApi.Message): FileItem? {
+        when (val content = msg.content) {
+            is TdApi.MessageDocument -> {
+                val rawName = content.document.fileName
+                val cap = content.caption.text
+                val name = if (rawName.isNotBlank()) {
+                    rawName
+                } else if (cap.contains("VaultX_File:")) {
+                    cap.substringAfter("VaultX_File:").substringBefore("|").trim()
+                } else {
+                    "Document_${msg.id}"
+                }
+                val size = content.document.document.size
+                val mime = content.document.mimeType.ifBlank { "application/octet-stream" }
+                val localPath = content.document.document.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                return FileItem(
+                    name = name,
+                    telegramMessageId = msg.id,
+                    sizeBytes = size,
+                    mimeType = mime,
+                    category = determineCategory(name, mime),
+                    isFavorite = false,
+                    isTrash = false,
+                    uploadTimestamp = msg.date * 1000L,
+                    localUri = localPath,
+                    chunkCount = 1
+                )
+            }
+            is TdApi.MessageVideo -> {
+                val name = content.video.fileName.ifBlank { "Video_${msg.id}.mp4" }
+                val size = content.video.video.size
+                val mime = content.video.mimeType.ifBlank { "video/mp4" }
+                val localPath = content.video.video.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                return FileItem(
+                    name = name,
+                    telegramMessageId = msg.id,
+                    sizeBytes = size,
+                    mimeType = mime,
+                    category = FileCategory.VIDEOS,
+                    isFavorite = false,
+                    isTrash = false,
+                    uploadTimestamp = msg.date * 1000L,
+                    localUri = localPath,
+                    chunkCount = 1
+                )
+            }
+            is TdApi.MessagePhoto -> {
+                val largest = content.photo.sizes.lastOrNull()
+                val name = "Photo_${msg.id}.jpg"
+                val size = largest?.photo?.size?.toLong() ?: 0L
+                val localPath = largest?.photo?.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                return FileItem(
+                    name = name,
+                    telegramMessageId = msg.id,
+                    sizeBytes = size,
+                    mimeType = "image/jpeg",
+                    category = FileCategory.PHOTOS,
+                    isFavorite = false,
+                    isTrash = false,
+                    uploadTimestamp = msg.date * 1000L,
+                    localUri = localPath,
+                    chunkCount = 1
+                )
+            }
+            is TdApi.MessageAudio -> {
+                val name = content.audio.fileName.ifBlank { "Audio_${msg.id}.mp3" }
+                val size = content.audio.audio.size
+                val mime = content.audio.mimeType.ifBlank { "audio/mpeg" }
+                val localPath = content.audio.audio.local?.path?.takeIf { it.isNotBlank() && File(it).exists() }
+                return FileItem(
+                    name = name,
+                    telegramMessageId = msg.id,
+                    sizeBytes = size,
+                    mimeType = mime,
+                    category = FileCategory.AUDIO,
+                    isFavorite = false,
+                    isTrash = false,
+                    uploadTimestamp = msg.date * 1000L,
+                    localUri = localPath,
+                    chunkCount = 1
+                )
+            }
+            else -> return null
         }
     }
 
@@ -305,6 +538,7 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                 _authState.value = TelegramAuthState.WAIT_PHONE
                 privateChannelId = 0L
                 phoneNumber = ""
+                prefs.edit().clear().apply()
             }
         }
     }
