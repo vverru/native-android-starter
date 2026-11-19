@@ -109,7 +109,6 @@ class FavoritesFragment : Fragment() {
                     Toast.makeText(requireContext(), "Could not download file from Telegram", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
     }
 
     private fun launchViewerForFile(file: FileItem) {
@@ -178,7 +177,7 @@ class FavoritesFragment : Fragment() {
         }
     }
 
-    private val syncListener = {
+    private val syncListener: () -> Unit = {
         loadFavorites()
     }
 
