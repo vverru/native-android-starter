@@ -94,6 +94,15 @@
         android:src="@drawable/ic_photo"
         android:contentDescription="@null" />
 
+    <!-- Center Loading Spinner -->
+    <ProgressBar
+        android:id="@+id/progressLoadingPhoto"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_centerInParent="true"
+        android:indeterminateTint="@color/vaultx_accent_primary"
+        android:visibility="gone" />
+
     <!-- Bottom Actions -->
     <LinearLayout
         android:id="@+id/bottomBarPhoto"

@@ -471,6 +471,9 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     if (thumb.file.local.isDownloadingCompleted && thumb.file.local.path.isNotBlank() && File(thumb.file.local.path).exists()) {
                         thumbPath = thumb.file.local.path
                     } else {
+                        synchronized(activeThumbnailDownloads) {
+                            activeThumbnailDownloads[thumb.file.id] = msg.id
+                        }
                         tdClient?.send(TdApi.DownloadFile(thumb.file.id, 1, 0, 0, false)) {}
                     }
                 }
@@ -525,6 +528,9 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     if (thumb.file.local.isDownloadingCompleted && thumb.file.local.path.isNotBlank() && File(thumb.file.local.path).exists()) {
                         thumbPath = thumb.file.local.path
                     } else {
+                        synchronized(activeThumbnailDownloads) {
+                            activeThumbnailDownloads[thumb.file.id] = msg.id
+                        }
                         tdClient?.send(TdApi.DownloadFile(thumb.file.id, 1, 0, 0, false)) {}
                     }
                 }
@@ -570,6 +576,9 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     if (smallest.photo.local.isDownloadingCompleted && smallest.photo.local.path.isNotBlank() && File(smallest.photo.local.path).exists()) {
                         thumbPath = smallest.photo.local.path
                     } else {
+                        synchronized(activeThumbnailDownloads) {
+                            activeThumbnailDownloads[smallest.photo.id] = msg.id
+                        }
                         tdClient?.send(TdApi.DownloadFile(smallest.photo.id, 1, 0, 0, false)) {}
                     }
                 }
@@ -651,6 +660,7 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
     }
 
     private val activeDownloads = mutableMapOf<Int, (File?) -> Unit>()
+    private val activeThumbnailDownloads = mutableMapOf<Int, Long>()
 
     private fun handleFileUpdate(file: TdApi.File) {
         if (file.local.isDownloadingCompleted && file.local.path.isNotBlank()) {
@@ -659,10 +669,63 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                 val callback = synchronized(activeDownloads) {
                     activeDownloads.remove(file.id)
                 }
-                mainHandler.post {
-                    callback?.invoke(localFile)
+                if (callback != null) {
+                    mainHandler.post {
+                        callback.invoke(localFile)
+                    }
+                }
+
+                val thumbMsgId = synchronized(activeThumbnailDownloads) {
+                    activeThumbnailDownloads.remove(file.id)
+                }
+                if (thumbMsgId != null) {
+                    VaultXApplication.instance.databaseHelper.updateThumbnailUriByTelegramMsgId(thumbMsgId, localFile.absolutePath)
+                    notifySyncListeners()
                 }
             }
+        }
+    }
+
+    /**
+     * On-demand background thumbnail request for messages that do not have thumbnails yet.
+     */
+    fun requestThumbnailForMessage(msgId: Long) {
+        if (msgId <= 0L) return
+        val targetChatId = privateChannelId
+        if (targetChatId == 0L) return
+        tdClient?.send(TdApi.GetMessage(targetChatId, msgId)) { result ->
+            if (result is TdApi.Message) {
+                val thumbFile = when (val c = result.content) {
+                    is TdApi.MessageDocument -> c.document.thumbnail?.file
+                    is TdApi.MessageVideo -> c.video.thumbnail?.file
+                    is TdApi.MessagePhoto -> c.photo.sizes.firstOrNull()?.photo
+                    else -> null
+                }
+                if (thumbFile != null) {
+                    if (thumbFile.local.isDownloadingCompleted && thumbFile.local.path.isNotBlank() && File(thumbFile.local.path).exists()) {
+                        VaultXApplication.instance.databaseHelper.updateThumbnailUriByTelegramMsgId(msgId, thumbFile.local.path)
+                        notifySyncListeners()
+                    } else {
+                        synchronized(activeThumbnailDownloads) {
+                            activeThumbnailDownloads[thumbFile.id] = msgId
+                        }
+                        tdClient?.send(TdApi.DownloadFile(thumbFile.id, 1, 0, 0, false)) {}
+                    }
+                }
+            }
+        }
+    }
+
+    private fun saveToVaultStorage(sourceFile: File, originalName: String): File {
+        val vaultDir = File(context.filesDir, "vault_files").apply { mkdirs() }
+        val dest = File(vaultDir, originalName)
+        return try {
+            if (sourceFile.canonicalPath != dest.canonicalPath) {
+                sourceFile.copyTo(dest, overwrite = true)
+            }
+            dest
+        } catch (_: Exception) {
+            sourceFile
         }
     }
 
@@ -674,16 +737,35 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         onComplete: (File?) -> Unit
     ) {
         if (!item.localUri.isNullOrBlank()) {
-            val local = File(item.localUri!!)
+            val cleanPath = item.localUri!!.removePrefix("file://")
+            val local = File(cleanPath)
             if (local.exists()) {
-                onComplete(local)
+                mainHandler.post { onComplete(local) }
                 return
             }
         }
 
+        val localVault = findVaultFile(File(context.filesDir, "vault_files"), item.name)
+        if (localVault != null && localVault.exists()) {
+            VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, localVault.absolutePath)
+            mainHandler.post { onComplete(localVault) }
+            return
+        }
+
+        if (privateChannelId == 0L) {
+            setupVaultStorageChannel { readyChannelId ->
+                if (readyChannelId != 0L) {
+                    downloadFileFromTelegram(item, onComplete)
+                } else {
+                    mainHandler.post { onComplete(null) }
+                }
+            }
+            return
+        }
+
         val targetChatId = privateChannelId
         if (targetChatId == 0L || item.telegramMessageId == 0L) {
-            onComplete(null)
+            mainHandler.post { onComplete(null) }
             return
         }
 
@@ -694,18 +776,22 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
                     if (tdlibFile.local.isDownloadingCompleted && tdlibFile.local.path.isNotBlank()) {
                         val downloaded = File(tdlibFile.local.path)
                         if (downloaded.exists()) {
-                            VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, downloaded.absolutePath)
-                            mainHandler.post { onComplete(downloaded) }
+                            val persistent = saveToVaultStorage(downloaded, item.name)
+                            VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, persistent.absolutePath)
+                            mainHandler.post { onComplete(persistent) }
                             return@send
                         }
                     }
 
                     synchronized(activeDownloads) {
                         activeDownloads[tdlibFile.id] = { completedFile ->
-                            if (completedFile != null) {
-                                VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, completedFile.absolutePath)
+                            if (completedFile != null && completedFile.exists()) {
+                                val persistent = saveToVaultStorage(completedFile, item.name)
+                                VaultXApplication.instance.databaseHelper.updateLocalUri(item.id, persistent.absolutePath)
+                                mainHandler.post { onComplete(persistent) }
+                            } else {
+                                mainHandler.post { onComplete(null) }
                             }
-                            onComplete(completedFile)
                         }
                     }
 

@@ -75,8 +75,8 @@ class FileAdapter(
             val isPhotoOrVideo = item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS || isImageOrVideo(item.name)
 
             // Resilient lookup: check localUri -> thumbnailUri -> vault_files folder
-            val previewFile = item.localUri?.let { File(it) }?.takeIf { it.exists() }
-                ?: item.thumbnailUri?.let { File(it) }?.takeIf { it.exists() }
+            val previewFile = item.localUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
+                ?: item.thumbnailUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
                 ?: findLocalVaultFile(itemView.context, item.name)
 
             if (previewFile != null) {
@@ -97,6 +97,9 @@ class FileAdapter(
             } else {
                 binding.ivIcon.scaleType = ImageView.ScaleType.FIT_CENTER
                 binding.ivIcon.setImageResource(placeholderIcon)
+                if (item.telegramMessageId > 0L) {
+                    com.vaultx.app.VaultXApplication.instance.telegramClient.requestThumbnailForMessage(item.telegramMessageId)
+                }
             }
 
             // Video play icon badge
@@ -106,6 +109,7 @@ class FileAdapter(
             binding.ivFavorite.setImageResource(starRes)
 
             binding.root.setOnClickListener { onItemClick(item) }
+            binding.ivIcon.setOnClickListener { onItemClick(item) }
             binding.root.setOnLongClickListener {
                 onMoreOptionsClick?.invoke(item)
                 true
@@ -136,8 +140,8 @@ class FileAdapter(
             val placeholderIcon = getCategoryIcon(item.category)
             val isPhotoOrVideo = item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS || isImageOrVideo(item.name)
 
-            val previewFile = item.localUri?.let { File(it) }?.takeIf { it.exists() }
-                ?: item.thumbnailUri?.let { File(it) }?.takeIf { it.exists() }
+            val previewFile = item.localUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
+                ?: item.thumbnailUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
                 ?: findLocalVaultFile(itemView.context, item.name)
 
             if (previewFile != null) {
@@ -158,12 +162,16 @@ class FileAdapter(
             } else {
                 binding.ivIconList.scaleType = ImageView.ScaleType.FIT_CENTER
                 binding.ivIconList.setImageResource(placeholderIcon)
+                if (item.telegramMessageId > 0L) {
+                    com.vaultx.app.VaultXApplication.instance.telegramClient.requestThumbnailForMessage(item.telegramMessageId)
+                }
             }
 
             val starRes = if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
             binding.ivFavoriteList.setImageResource(starRes)
 
             binding.root.setOnClickListener { onItemClick(item) }
+            binding.ivIconList.setOnClickListener { onItemClick(item) }
             binding.root.setOnLongClickListener {
                 onMoreOptionsClick?.invoke(item)
                 true
@@ -240,11 +248,19 @@ class FileAdapter(
         }
 
         fun isImageOrVideo(name: String): Boolean {
+            return isImage(name) || isVideo(name)
+        }
+
+        fun isImage(name: String): Boolean {
             val lower = name.lowercase()
             return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
                    lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp") ||
-                   lower.endsWith(".heic") || lower.endsWith(".heif") || lower.endsWith(".svg") ||
-                   lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".mov") ||
+                   lower.endsWith(".heic") || lower.endsWith(".heif") || lower.endsWith(".svg")
+        }
+
+        fun isVideo(name: String): Boolean {
+            val lower = name.lowercase()
+            return lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".mov") ||
                    lower.endsWith(".avi") || lower.endsWith(".3gp") || lower.endsWith(".webm")
         }
     }

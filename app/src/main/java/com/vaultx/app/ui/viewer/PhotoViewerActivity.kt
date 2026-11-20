@@ -101,7 +101,7 @@ class PhotoViewerActivity : AppCompatActivity() {
     }
 
     private fun loadImage() {
-        var fileToLoad = currentFileUri?.let { File(it) }?.takeIf { it.exists() }
+        var fileToLoad = currentFileUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
         if (fileToLoad == null) {
             fileToLoad = com.vaultx.app.ui.adapters.FileAdapter.findLocalVaultFile(this, currentFileName)
             if (fileToLoad != null) {
@@ -110,6 +110,7 @@ class PhotoViewerActivity : AppCompatActivity() {
         }
 
         if (fileToLoad != null && fileToLoad.exists()) {
+            binding.progressLoadingPhoto.visibility = android.view.View.GONE
             Glide.with(this)
                 .load(fileToLoad)
                 .diskCacheStrategy(DiskCacheStrategy.NONE)
@@ -118,15 +119,40 @@ class PhotoViewerActivity : AppCompatActivity() {
                 .placeholder(R.drawable.ic_photo)
                 .error(R.drawable.ic_photo)
                 .into(binding.ivFullscreenPhoto)
-        } else if (!currentFileUri.isNullOrBlank()) {
-            Glide.with(this)
-                .load(currentFileUri)
-                .fitCenter()
-                .placeholder(R.drawable.ic_photo)
-                .error(R.drawable.ic_photo)
-                .into(binding.ivFullscreenPhoto)
         } else {
-            binding.ivFullscreenPhoto.setImageResource(R.drawable.ic_photo)
+            val db = VaultXApplication.instance.databaseHelper
+            val item = db.findFileByName(currentFileName)
+            if (item != null && item.telegramMessageId > 0L) {
+                binding.progressLoadingPhoto.visibility = android.view.View.VISIBLE
+                VaultXApplication.instance.telegramClient.downloadFileFromTelegram(item) { downloaded ->
+                    binding.progressLoadingPhoto.visibility = android.view.View.GONE
+                    if (downloaded != null && downloaded.exists()) {
+                        currentFileUri = downloaded.absolutePath
+                        Glide.with(this)
+                            .load(downloaded)
+                            .diskCacheStrategy(DiskCacheStrategy.NONE)
+                            .skipMemoryCache(true)
+                            .fitCenter()
+                            .placeholder(R.drawable.ic_photo)
+                            .error(R.drawable.ic_photo)
+                            .into(binding.ivFullscreenPhoto)
+                    } else {
+                        binding.ivFullscreenPhoto.setImageResource(R.drawable.ic_photo)
+                        Toast.makeText(this, "Could not load photo from cloud", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else if (!currentFileUri.isNullOrBlank()) {
+                binding.progressLoadingPhoto.visibility = android.view.View.GONE
+                Glide.with(this)
+                    .load(currentFileUri!!.removePrefix("file://"))
+                    .fitCenter()
+                    .placeholder(R.drawable.ic_photo)
+                    .error(R.drawable.ic_photo)
+                    .into(binding.ivFullscreenPhoto)
+            } else {
+                binding.progressLoadingPhoto.visibility = android.view.View.GONE
+                binding.ivFullscreenPhoto.setImageResource(R.drawable.ic_photo)
+            }
         }
     }
 

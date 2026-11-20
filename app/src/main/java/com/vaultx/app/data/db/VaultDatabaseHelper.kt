@@ -74,6 +74,14 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         return db.update(TABLE_FILES, values, "$COL_ID = ?", arrayOf(fileId.toString()))
     }
 
+    fun updateThumbnailUriByTelegramMsgId(telegramMsgId: Long, thumbUri: String): Int {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COL_THUMBNAIL_URI, thumbUri)
+        }
+        return db.update(TABLE_FILES, values, "$COL_TELEGRAM_MSG_ID = ?", arrayOf(telegramMsgId.toString()))
+    }
+
     fun updateLocalUriByTelegramMsgId(telegramMsgId: Long, localUri: String): Int {
         val db = writableDatabase
         val values = ContentValues().apply {

@@ -192,35 +192,40 @@ class FilesFragment : Fragment() {
     }
 
     private fun openFile(file: FileItem) {
-        val local = file.localUri?.let { java.io.File(it) }?.takeIf { it.exists() }
+        val local = file.localUri?.removePrefix("file://")?.let { java.io.File(it) }?.takeIf { it.exists() }
             ?: com.vaultx.app.ui.adapters.FileAdapter.findLocalVaultFile(requireContext(), file.name)
         if (local != null) {
             file.localUri = local.absolutePath
             launchViewerForFile(file)
             return
         }
-            val progressDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext(), com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
-                .setTitle("Downloading from Cloud")
-                .setMessage("Fetching ${file.name} for viewing…")
-                .setCancelable(false)
-                .create()
-            progressDialog.show()
 
-            VaultXApplication.instance.telegramClient.downloadFileFromTelegram(file) { downloadedFile ->
-                progressDialog.dismiss()
-                if (downloadedFile != null && downloadedFile.exists()) {
-                    file.localUri = downloadedFile.absolutePath
-                    loadData()
-                    launchViewerForFile(file)
-                } else {
-                    Toast.makeText(requireContext(), "Could not download file from Telegram", Toast.LENGTH_SHORT).show()
-                }
+        val progressDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext(), com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
+            .setTitle("Downloading from Cloud")
+            .setMessage("Fetching ${file.name} for viewing…")
+            .setCancelable(false)
+            .create()
+        progressDialog.show()
+
+        VaultXApplication.instance.telegramClient.downloadFileFromTelegram(file) { downloadedFile ->
+            progressDialog.dismiss()
+            if (downloadedFile != null && downloadedFile.exists()) {
+                file.localUri = downloadedFile.absolutePath
+                loadData()
+                launchViewerForFile(file)
+            } else {
+                Toast.makeText(requireContext(), "Could not download file from Telegram", Toast.LENGTH_SHORT).show()
             }
+        }
     }
 
     private fun launchViewerForFile(file: FileItem) {
-        when (file.category) {
-            FileCategory.PHOTOS -> {
+        val isPhoto = file.category == FileCategory.PHOTOS || com.vaultx.app.ui.adapters.FileAdapter.isImage(file.name)
+        val isVideo = file.category == FileCategory.VIDEOS || com.vaultx.app.ui.adapters.FileAdapter.isVideo(file.name)
+        val isPdf = file.category == FileCategory.PDFS || file.name.lowercase().endsWith(".pdf")
+
+        when {
+            isPhoto -> {
                 val intent = Intent(requireContext(), PhotoViewerActivity::class.java).apply {
                     putExtra("file_name", file.name)
                     putExtra("file_size", file.formattedSize)
@@ -230,7 +235,7 @@ class FilesFragment : Fragment() {
                 }
                 startActivity(intent)
             }
-            FileCategory.VIDEOS -> {
+            isVideo -> {
                 val intent = Intent(requireContext(), VideoPlayerActivity::class.java).apply {
                     putExtra("file_name", file.name)
                     putExtra("file_id", file.id)
@@ -238,7 +243,7 @@ class FilesFragment : Fragment() {
                 }
                 startActivity(intent)
             }
-            FileCategory.PDFS -> {
+            isPdf -> {
                 val intent = Intent(requireContext(), com.vaultx.app.ui.viewer.PdfViewerActivity::class.java).apply {
                     putExtra("file_name", file.name)
                     putExtra("file_id", file.id)
@@ -247,16 +252,7 @@ class FilesFragment : Fragment() {
                 startActivity(intent)
             }
             else -> {
-                if (file.name.lowercase().endsWith(".pdf")) {
-                    val intent = Intent(requireContext(), com.vaultx.app.ui.viewer.PdfViewerActivity::class.java).apply {
-                        putExtra("file_name", file.name)
-                        putExtra("file_id", file.id)
-                        putExtra("file_uri", file.localUri)
-                    }
-                    startActivity(intent)
-                } else {
-                    openExternalDocument(file)
-                }
+                openExternalDocument(file)
             }
         }
     }

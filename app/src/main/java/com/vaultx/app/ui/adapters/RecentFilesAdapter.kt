@@ -51,8 +51,8 @@ class RecentFilesAdapter(
 
             val isPhotoOrVideo = item.category == FileCategory.PHOTOS || item.category == FileCategory.VIDEOS || FileAdapter.isImageOrVideo(item.name)
 
-            val previewFile = item.localUri?.let { File(it) }?.takeIf { it.exists() }
-                ?: item.thumbnailUri?.let { File(it) }?.takeIf { it.exists() }
+            val previewFile = item.localUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
+                ?: item.thumbnailUri?.removePrefix("file://")?.let { File(it) }?.takeIf { it.exists() }
                 ?: FileAdapter.findLocalVaultFile(itemView.context, item.name)
 
             if (previewFile != null) {
@@ -73,9 +73,13 @@ class RecentFilesAdapter(
             } else {
                 binding.ivRecentIcon.scaleType = ImageView.ScaleType.FIT_CENTER
                 binding.ivRecentIcon.setImageResource(placeholderIcon)
+                if (item.telegramMessageId > 0L) {
+                    com.vaultx.app.VaultXApplication.instance.telegramClient.requestThumbnailForMessage(item.telegramMessageId)
+                }
             }
 
             binding.root.setOnClickListener { onItemClick(item) }
+            binding.ivRecentIcon.setOnClickListener { onItemClick(item) }
         }
 
         private fun renderPdfThumbnail(file: File, imageView: ImageView, fallbackRes: Int) {
