@@ -372,10 +372,17 @@ class VaultDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
 
     fun purgeDummyData() {
         val db = writableDatabase
-        // Remove old dummy sample records completely
+        // Remove old dummy sample records and orphan placeholders completely
         db.delete(
             TABLE_FILES,
-            "$COL_NAME IN (?, ?, ?, ?, ?) OR ($COL_LOCAL_URI IS NULL AND $COL_TELEGRAM_MSG_ID = 0)",
+            """
+            $COL_NAME IN (?, ?, ?, ?, ?) 
+            OR $COL_NAME LIKE 'Document_%' 
+            OR ($COL_NAME LIKE 'Photo_%' AND $COL_LOCAL_URI IS NULL) 
+            OR ($COL_NAME LIKE 'Video_%' AND $COL_LOCAL_URI IS NULL) 
+            OR ($COL_NAME LIKE 'Audio_%' AND $COL_LOCAL_URI IS NULL)
+            OR ($COL_LOCAL_URI IS NULL AND $COL_TELEGRAM_MSG_ID = 0)
+            """.trimIndent(),
             arrayOf(
                 "Kashmir_Trek_2026.jpg",
                 "Interstellar_4K_HDR.mkv",

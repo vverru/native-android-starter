@@ -166,7 +166,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
-        val safeFileName = ensureValidExtension(fileName, mimeType)
+        val cleanName = fileName.replace(":", "_").replace("/", "_").replace("\\", "_")
+        val safeFileName = ensureValidExtension(cleanName, mimeType)
 
         // Save to PERMANENT local storage so file preview and opening works instantly!
         val vaultDir = File(filesDir, "vault_files").apply { mkdirs() }
@@ -174,6 +175,7 @@ class MainActivity : AppCompatActivity() {
         if (localDest.exists() && localDest.length() != fileSize) {
             localDest = File(vaultDir, "${System.currentTimeMillis()}_$safeFileName")
         }
+        val finalFileName = localDest.name
         try {
             contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(localDest).use { output ->
@@ -187,9 +189,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         // IMMEDIATELY insert into SQLite and refresh UI so the image preview appears RIGHT NOW!
-        val category = VaultXApplication.instance.telegramClient.determineCategory(safeFileName, mimeType)
+        val category = VaultXApplication.instance.telegramClient.determineCategory(finalFileName, mimeType)
         val initialItem = FileItem(
-            name = safeFileName,
+            name = finalFileName,
             telegramMessageId = 0L,
             sizeBytes = fileSize,
             mimeType = mimeType,
@@ -202,7 +204,7 @@ class MainActivity : AppCompatActivity() {
         VaultXApplication.instance.databaseHelper.insertFile(initialItem)
         filesFragment.loadData()
 
-        startRealTelegramUpload(localDest.absolutePath, safeFileName, fileSize, mimeType)
+        startRealTelegramUpload(localDest.absolutePath, finalFileName, fileSize, mimeType)
     }
 
     private fun ensureValidExtension(fileName: String, mimeType: String): String {
