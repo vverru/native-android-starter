@@ -20,7 +20,8 @@ class FileAdapter(
     private var files: List<FileItem>,
     var isGridMode: Boolean = true,
     private val onItemClick: (FileItem) -> Unit,
-    private val onFavoriteToggle: (FileItem) -> Unit
+    private val onFavoriteToggle: (FileItem) -> Unit,
+    private val onMoreOptionsClick: ((FileItem) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     fun updateData(newFiles: List<FileItem>) {
@@ -105,6 +106,13 @@ class FileAdapter(
             binding.ivFavorite.setImageResource(starRes)
 
             binding.root.setOnClickListener { onItemClick(item) }
+            binding.root.setOnLongClickListener {
+                onMoreOptionsClick?.invoke(item)
+                true
+            }
+            binding.btnMoreOptions.setOnClickListener {
+                onMoreOptionsClick?.invoke(item)
+            }
 
             // Instant 0ms optimistic favorite toggle with tactile pop animation
             binding.ivFavorite.setOnClickListener {
@@ -156,6 +164,13 @@ class FileAdapter(
             binding.ivFavoriteList.setImageResource(starRes)
 
             binding.root.setOnClickListener { onItemClick(item) }
+            binding.root.setOnLongClickListener {
+                onMoreOptionsClick?.invoke(item)
+                true
+            }
+            binding.btnMoreOptionsList.setOnClickListener {
+                onMoreOptionsClick?.invoke(item)
+            }
 
             // Instant 0ms optimistic favorite toggle with tactile pop animation
             binding.ivFavoriteList.setOnClickListener {

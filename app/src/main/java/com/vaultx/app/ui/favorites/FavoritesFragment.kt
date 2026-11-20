@@ -17,6 +17,8 @@ import com.vaultx.app.ui.adapters.FileAdapter
 import com.vaultx.app.ui.viewer.PhotoViewerActivity
 import com.vaultx.app.ui.viewer.VideoPlayerActivity
 
+import com.vaultx.app.ui.files.FileOptionsBottomSheet
+
 class FavoritesFragment : Fragment() {
 
     private var _binding: FragmentFavoritesBinding? = null
@@ -50,6 +52,26 @@ class FavoritesFragment : Fragment() {
                     VaultXApplication.instance.databaseHelper.setFavorite(file.id, false)
                 }.start()
                 Toast.makeText(requireContext(), "${file.name} ${getString(R.string.action_unfavorite)}", Toast.LENGTH_SHORT).show()
+            },
+            onMoreOptionsClick = { file ->
+                val sheet = FileOptionsBottomSheet.newInstance(
+                    file = file,
+                    onOpen = { openFile(it) },
+                    onFavoriteToggle = {
+                        Thread {
+                            VaultXApplication.instance.databaseHelper.setFavorite(it.id, it.isFavorite)
+                        }.start()
+                        loadFavorites()
+                    },
+                    onRename = { targetFile, newName ->
+                        VaultXApplication.instance.databaseHelper.renameFile(targetFile.id, newName)
+                        loadFavorites()
+                    },
+                    onDelete = {
+                        loadFavorites()
+                    }
+                )
+                sheet.show(childFragmentManager, "fav_file_options")
             }
         )
 

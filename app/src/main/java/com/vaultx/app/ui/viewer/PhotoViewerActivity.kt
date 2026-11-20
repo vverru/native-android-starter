@@ -78,9 +78,25 @@ class PhotoViewerActivity : AppCompatActivity() {
         }
 
         binding.btnPhotoDelete.setOnClickListener {
-            VaultXApplication.instance.databaseHelper.moveToTrash(fileId)
-            Toast.makeText(this, "Moved to Trash", Toast.LENGTH_SHORT).show()
-            finish()
+            AlertDialog.Builder(this, com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
+                .setTitle("Delete from Vault & Telegram?")
+                .setMessage("Delete '$currentFileName'?\n\nThis will permanently delete this photo from your phone AND from your private Telegram Cloud channel.")
+                .setPositiveButton("Delete Permanently") { _, _ ->
+                    val db = VaultXApplication.instance.databaseHelper
+                    val item = db.findFileByName(currentFileName)
+                    if (item != null) {
+                        VaultXApplication.instance.telegramClient.deleteFileFromCloudAndLocal(item) {
+                            Toast.makeText(this, "Deleted from Vault & Telegram channel", Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    } else {
+                        db.deletePermanently(fileId)
+                        Toast.makeText(this, "Deleted permanently", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
 

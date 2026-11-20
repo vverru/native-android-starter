@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/vaultx_surface"
+    android:paddingBottom="24dp">
+
+    <!-- Top Drag Handle -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/bg_circle_translucent"
+        android:backgroundTint="@color/vaultx_card_stroke" />
+
+    <!-- File Info Header Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingBottom="14dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/vaultx_surface_variant"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/vaultx_card_stroke">
+
+            <ImageView
+                android:id="@+id/ivSheetIcon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_doc"
+                android:contentDescription="@null" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="14dp">
+
+            <TextView
+                android:id="@+id/tvSheetFileName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="middle"
+                android:textColor="@color/vaultx_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSheetFileMeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textColor="@color/vaultx_text_secondary"
+                android:textSize="12.5sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/vaultx_card_stroke"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Action 1: Open / Preview -->
+    <LinearLayout
+        android:id="@+id/actionSheetOpen"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_folder"
+            app:tint="@color/vaultx_primary"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Open &amp; View"
+            android:textColor="@color/vaultx_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Action 2: Favorite Toggle -->
+    <LinearLayout
+        android:id="@+id/actionSheetFavorite"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:id="@+id/ivSheetFavIcon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_star_outline"
+            app:tint="@color/vaultx_accent_star"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/tvSheetFavText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Add to Favorites"
+            android:textColor="@color/vaultx_text_primary"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!-- Action 3: Rename -->
+    <LinearLayout
+        android:id="@+id/actionSheetRename"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/vaultx_text_secondary"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Rename File"
+            android:textColor="@color/vaultx_text_primary"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!-- Action 4: Share -->
+    <LinearLayout
+        android:id="@+id/actionSheetShare"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_share"
+            app:tint="@color/vaultx_text_secondary"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Share File"
+            android:textColor="@color/vaultx_text_primary"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/vaultx_card_stroke"
+        android:layout_marginVertical="6dp" />
+
+    <!-- Action 5: Delete from Telegram & Vault -->
+    <LinearLayout
+        android:id="@+id/actionSheetDelete"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_trash"
+            app:tint="@color/vaultx_danger"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Delete from Vault &amp; Telegram"
+            android:textColor="@color/vaultx_danger"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

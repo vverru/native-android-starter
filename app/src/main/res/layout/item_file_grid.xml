@@ -5,9 +5,9 @@
     android:id="@+id/cardFile"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardCornerRadius="14dp"
-    app:cardElevation="2dp"
+    android:layout_margin="5dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp"
     app:cardBackgroundColor="@color/vaultx_surface"
     app:strokeWidth="1dp"
     app:strokeColor="@color/vaultx_card_stroke">
@@ -17,10 +17,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Thumbnail Image Container with 110dp preview -->
+        <!-- Thumbnail Image Container with 120dp preview -->
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="110dp"
+            android:layout_height="118dp"
             android:background="@color/vaultx_surface_variant">
 
             <ImageView
@@ -33,24 +33,26 @@
             <!-- Video Play Badge Overlay -->
             <ImageView
                 android:id="@+id/ivPlayBadge"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:layout_gravity="center"
-                android:padding="6dp"
+                android:padding="8dp"
                 android:src="@drawable/ic_play"
                 app:tint="@color/white"
+                android:background="@drawable/bg_circle_translucent"
                 android:visibility="gone"
                 android:contentDescription="@null" />
 
             <!-- Favorite Star Button Overlay -->
             <ImageView
                 android:id="@+id/ivFavorite"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:layout_gravity="top|end"
                 android:layout_margin="6dp"
-                android:padding="4dp"
+                android:padding="5dp"
                 android:src="@drawable/ic_star_outline"
+                android:background="@drawable/bg_circle_translucent"
                 android:contentDescription="@string/action_favorite" />
         </FrameLayout>
 
@@ -58,27 +60,47 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="8dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="4dp"
+            android:paddingVertical="7dp">
 
-            <TextView
-                android:id="@+id/tvFileName"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:maxLines="1"
-                android:ellipsize="middle"
-                android:textColor="@color/vaultx_text_primary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvFileSize"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/vaultx_text_secondary"
-                android:textSize="11sp" />
+                <TextView
+                    android:id="@+id/tvFileName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="middle"
+                    android:textColor="@color/vaultx_text_primary"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvFileSize"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/vaultx_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- 3-Dots More Options Button -->
+            <ImageView
+                android:id="@+id/btnMoreOptions"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:padding="5dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_more_vert"
+                app:tint="@color/vaultx_text_secondary"
+                android:contentDescription="File options" />
         </LinearLayout>
 
     </LinearLayout>

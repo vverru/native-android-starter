@@ -856,6 +856,67 @@ class TelegramClientManager(private val context: Context) : Client.ResultHandler
         }
     }
 
+    /**
+     * Deletes a message permanently from the user's private Telegram storage channel.
+     * With revoke = true, it deletes the file from Telegram servers.
+     */
+    fun deleteMessageFromTelegram(messageId: Long, onComplete: ((Boolean) -> Unit)? = null) {
+        val targetChatId = privateChannelId
+        if (targetChatId == 0L || messageId <= 0L) {
+            onComplete?.invoke(false)
+            return
+        }
+        tdClient?.send(TdApi.DeleteMessages(targetChatId, longArrayOf(messageId), true)) { result ->
+            mainHandler.post {
+                val success = result is TdApi.Ok
+                if (success) {
+                    Log.d(tag, "Successfully deleted message $messageId from Telegram channel $targetChatId")
+                } else {
+                    Log.e(tag, "Failed to delete message $messageId from Telegram: $result")
+                }
+                onComplete?.invoke(success)
+            }
+        }
+    }
+
+    /**
+     * Complete unified deletion:
+     * 1. Deletes the file from the user's private Telegram channel
+     * 2. Deletes local file from vault_files and internal storage
+     * 3. Deletes cached thumbnail
+     * 4. Deletes entry from SQLite database
+     */
+    fun deleteFileFromCloudAndLocal(file: FileItem, onComplete: (() -> Unit)? = null) {
+        // 1. Delete from Telegram Channel
+        if (file.telegramMessageId > 0L) {
+            deleteMessageFromTelegram(file.telegramMessageId)
+        }
+
+        // 2. Delete local files
+        file.localUri?.let { path ->
+            try {
+                val f = File(path)
+                if (f.exists()) f.delete()
+            } catch (_: Exception) {}
+        }
+        file.thumbnailUri?.let { path ->
+            try {
+                val f = File(path)
+                if (f.exists()) f.delete()
+            } catch (_: Exception) {}
+        }
+        try {
+            val vaultDir = File(context.filesDir, "vault_files")
+            val localF = findVaultFile(vaultDir, file.name)
+            if (localF != null && localF.exists()) localF.delete()
+        } catch (_: Exception) {}
+
+        // 3. Delete permanently from local SQLite
+        VaultXApplication.instance.databaseHelper.deletePermanently(file.id)
+        notifySyncListeners()
+        mainHandler.post { onComplete?.invoke() }
+    }
+
     fun prepareFileUpload(name: String, sizeBytes: Long, mimeType: String): FileItem {
         val category = determineCategory(name, mimeType)
         val chunkCount = ChunkedUploader.calculateChunks(sizeBytes)

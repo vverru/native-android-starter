@@ -43,6 +43,11 @@ class FilesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val tg = VaultXApplication.instance.telegramClient
+        if (tg.privateChannelId != 0L) {
+            binding.tvCloudChannelStatus.text = "● ${tg.privateChannelTitle} • Synced"
+        }
+
         setupRecyclerViews()
         setupListeners()
         loadData()
@@ -65,10 +70,35 @@ class FilesFragment : Fragment() {
                 }.start()
                 val msg = if (file.isFavorite) getString(R.string.action_favorite) else getString(R.string.action_unfavorite)
                 Toast.makeText(requireContext(), "${file.name} $msg", Toast.LENGTH_SHORT).show()
+            },
+            onMoreOptionsClick = { file ->
+                showFileOptionsSheet(file)
             }
         )
         updateLayoutManager()
         binding.rvFiles.adapter = fileAdapter
+    }
+
+    private fun showFileOptionsSheet(file: FileItem) {
+        val sheet = FileOptionsBottomSheet.newInstance(
+            file = file,
+            onOpen = { openFile(it) },
+            onFavoriteToggle = {
+                Thread {
+                    VaultXApplication.instance.databaseHelper.setFavorite(it.id, it.isFavorite)
+                }.start()
+                loadData()
+            },
+            onRename = { targetFile, newName ->
+                VaultXApplication.instance.databaseHelper.renameFile(targetFile.id, newName)
+                loadData()
+                Toast.makeText(requireContext(), "Renamed to $newName", Toast.LENGTH_SHORT).show()
+            },
+            onDelete = {
+                loadData()
+            }
+        )
+        sheet.show(childFragmentManager, "file_options")
     }
 
     private fun updateLayoutManager() {

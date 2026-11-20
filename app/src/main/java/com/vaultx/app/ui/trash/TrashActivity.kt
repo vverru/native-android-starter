@@ -37,11 +37,12 @@ class TrashActivity : AppCompatActivity() {
             onDeleteForever = { file ->
                 AlertDialog.Builder(this, com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
                     .setTitle(R.string.action_delete_forever)
-                    .setMessage("Permanently delete ${file.name}? This cannot be undone.")
+                    .setMessage("Permanently delete ${file.name}?\n\nThis will remove it from your device storage AND from your private Telegram Cloud channel.")
                     .setPositiveButton("Delete Forever") { _, _ ->
-                        VaultXApplication.instance.databaseHelper.deletePermanently(file.id)
-                        loadTrash()
-                        Toast.makeText(this, "Deleted permanently", Toast.LENGTH_SHORT).show()
+                        VaultXApplication.instance.telegramClient.deleteFileFromCloudAndLocal(file) {
+                            loadTrash()
+                            Toast.makeText(this, "Deleted from Vault & Telegram channel", Toast.LENGTH_SHORT).show()
+                        }
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
